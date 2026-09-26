@@ -40,7 +40,7 @@ function createSeedMaterial(map) {
   return new THREE.ShaderMaterial({
     uniforms: {
       uMap: { value: map },
-      uColor: { value: new THREE.Color('#eafff1') }
+      uColor: { value: new THREE.Color('#eaf3ff') }
     },
     vertexShader: `
       attribute float aSize;
@@ -74,10 +74,13 @@ const HEAD_RADIUS = 1.05
 const HEAD_CENTER = new THREE.Vector3(0, 2.15, 0)
 
 // Scroll offsets that drive the whole narrative beat-by-beat.
-const RELEASE_START = 0.12
-const RELEASE_END = 0.5
-const BLOOM_START = 0.5
-const BLOOM_END = 0.6
+// These must stay inside CinematicScene's HERO_END window (0 - 0.30) —
+// the hero/intro now only owns the first 30% of the scroll so the six
+// copy screens that follow each get a full page of their own.
+const RELEASE_START = 0.06
+const RELEASE_END = 0.22
+const BLOOM_START = 0.22
+const BLOOM_END = 0.27
 
 export default function DandelionHero(props) {
   const scroll = useScroll()
@@ -254,10 +257,10 @@ export default function DandelionHero(props) {
       {/* ============================================== */}
 
       <mesh geometry={glowStemGeometry}>
-        <meshBasicMaterial color="#2fae54" transparent opacity={0.1} depthWrite={false} />
+        <meshBasicMaterial color="#4f86c4" transparent opacity={0.1} depthWrite={false} />
       </mesh>
       <mesh ref={stemRef} geometry={stemGeometry}>
-        <meshBasicMaterial color="#7CFC8A" transparent opacity={0.9} />
+        <meshBasicMaterial color="#9dd1ff" transparent opacity={0.9} />
       </mesh>
 
       {/* ============================================== */}
