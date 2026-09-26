@@ -74,13 +74,15 @@ const HEAD_RADIUS = 1.05
 const HEAD_CENTER = new THREE.Vector3(0, 2.15, 0)
 
 // Scroll offsets that drive the whole narrative beat-by-beat.
-// These must stay inside CinematicScene's HERO_END window (0 - 0.30) —
-// the hero/intro now only owns the first 30% of the scroll so the six
-// copy screens that follow each get a full page of their own.
-const RELEASE_START = 0.06
-const RELEASE_END = 0.22
-const BLOOM_START = 0.22
-const BLOOM_END = 0.27
+// With ScrollControls pages={7} (1 hero div + 6 screen divs), the hero
+// div's own on-screen window is exactly offset 0 - 1/6 (~0.167) — that's
+// how much of the scroll it physically occupies before the next div's
+// top reaches the viewport top. These stay inside that window, and must
+// stay in sync with CinematicScene's matching constants.
+const RELEASE_START = 0.033
+const RELEASE_END = 0.122
+const BLOOM_START = 0.122
+const BLOOM_END = 0.15
 
 export default function DandelionHero(props) {
   const scroll = useScroll()
@@ -176,6 +178,21 @@ export default function DandelionHero(props) {
   // BLOOM PETALS — appear where the core was once seeds finish.
   // ============================================================
 
+  // Petal profile: a curved teardrop instead of a straight-sided
+  // cone — base near the stem, bulges outward, tapers to a soft
+  // point. Rotated around Y with 32 segments for a smooth, glassy
+  // silhouette instead of the previous faceted 8-sided cone.
+  const petalGeometry = useMemo(() => {
+    const profile = [
+      new THREE.Vector2(0.02, 0),
+      new THREE.Vector2(0.13, 0.07),
+      new THREE.Vector2(0.165, 0.2),
+      new THREE.Vector2(0.13, 0.36),
+      new THREE.Vector2(0.05, 0.49),
+      new THREE.Vector2(0.0, 0.56)
+    ]
+    return new THREE.LatheGeometry(profile, 32)
+  }, [])
   const petalCount = 10
   const petals = useMemo(
     () => new Array(petalCount).fill(0).map((_, i) => ({
@@ -292,9 +309,22 @@ export default function DandelionHero(props) {
       {/* ============================================== */}
 
       <group ref={bloomGroupRef} position={HEAD_CENTER} scale={0}>
+        {/* Soft glow halo behind the petal cluster — reads as a
+            luminous bloom rather than a lit solid shape, echoing
+            the seed head's own glow treatment below. */}
+        <mesh>
+          <sphereGeometry args={[0.42, 16, 16]} />
+          <meshBasicMaterial color="#ffcf7a" transparent opacity={0.16} depthWrite={false} blending={THREE.AdditiveBlending} />
+        </mesh>
+        <mesh>
+          <sphereGeometry args={[0.65, 16, 16]} />
+          <meshBasicMaterial color="#ffe9b0" transparent opacity={0.07} depthWrite={false} blending={THREE.AdditiveBlending} />
+        </mesh>
+
         {petals.map((p, i) => (
           <mesh
             key={i}
+            geometry={petalGeometry}
             rotation={[p.tilt, p.angle, 0]}
             position={[
               Math.cos(p.angle) * 0.05,
@@ -302,15 +332,17 @@ export default function DandelionHero(props) {
               Math.sin(p.angle) * 0.05
             ]}
           >
-            <coneGeometry args={[0.16, 0.55, 8, 1, true]} />
             <meshPhysicalMaterial
-              color="#fbe7c6"
+              color="#fff3e0"
               emissive="#e6a94a"
-              emissiveIntensity={0.25}
-              roughness={0.4}
+              emissiveIntensity={0.3}
+              roughness={0.1}
+              transmission={0.9}
+              thickness={0.4}
+              ior={1.45}
+              clearcoat={0.6}
+              clearcoatRoughness={0.15}
               side={THREE.DoubleSide}
-              transparent
-              opacity={0.92}
             />
           </mesh>
         ))}

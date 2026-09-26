@@ -26,7 +26,7 @@ export default function App() {
           zIndex: 5
         }}
       >
-        <ScrollControls pages={9} damping={0.25}>
+        <ScrollControls pages={7} damping={0.25}>
           <CinematicScene />
         </ScrollControls>
       </Canvas>

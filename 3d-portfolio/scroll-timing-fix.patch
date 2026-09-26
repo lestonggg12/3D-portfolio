@@ -1,0 +1,179 @@
+diff --git a/3d-portfolio/src/App.jsx b/3d-portfolio/src/App.jsx
+index 8bb6d44..8d09938 100644
+--- a/3d-portfolio/src/App.jsx
++++ b/3d-portfolio/src/App.jsx
+@@ -26,7 +26,7 @@ export default function App() {
+           zIndex: 5
+         }}
+       >
+-        <ScrollControls pages={9} damping={0.25}>
++        <ScrollControls pages={7} damping={0.25}>
+           <CinematicScene />
+         </ScrollControls>
+       </Canvas>
+diff --git a/3d-portfolio/src/components/CinematicScene.jsx b/3d-portfolio/src/components/CinematicScene.jsx
+index 37986d7..2772d0d 100644
+--- a/3d-portfolio/src/components/CinematicScene.jsx
++++ b/3d-portfolio/src/components/CinematicScene.jsx
+@@ -17,20 +17,21 @@ const ACCENT_DIM = '#4f86c4'
+ 
+ // ============================================================
+ // SCROLL TIMELINE
+-// The dandelion intro now only owns the first 30% of the scroll
+-// (HERO_END). Everything after that is six equal copy screens,
+-// each getting its own full page of scroll to breathe.
+-// These must stay in sync with DandelionHero's RELEASE/BLOOM consts.
++// ScrollControls pages={7} = 1 hero div + 6 screen divs. Native
++// scroll means each div's top reaches the viewport top after
++// exactly 1/6 of the total offset range — these boundaries are
++// physical fact, not a tuning choice, and must stay in sync with
++// DandelionHero's RELEASE/BLOOM consts.
+ // ============================================================
+-const IRIS_OPEN_END = 0.03
+-const RELEASE_END = 0.22
+-const BLOOM_START = 0.22
+-const BLOOM_END = 0.27
+-const IRIS_CLOSE_START = 0.27
+-const HERO_END = 0.30
++const IRIS_OPEN_END = 0.017
++const RELEASE_END = 0.122
++const BLOOM_START = 0.122
++const BLOOM_END = 0.15
++const IRIS_CLOSE_START = 0.15
++const HERO_END = 1 / 6
+ 
+ const SCREEN_COUNT = 6
+-const SCREEN_SPAN = (1 - HERO_END) / SCREEN_COUNT
++const SCREEN_SPAN = 1 / 6
+ 
+ const READINGS = ['LAT 8.4803° N', 'SEED_COUNT 420', 'WIND 4kt NE', 'DRIFT +12%', '0x2F91', 'ALT 640m']
+ 
+@@ -54,17 +55,19 @@ const SCRIPT_MARK_STYLE = [
+ 
+ // A recurring script-S watermark — the "six screens of copy set
+ // with a script S" from the brief. Same mark, repositioned and
+-// rescaled per screen so it never reads as static wallpaper.
+-function ScriptMark({ index }) {
++// rescaled per screen, and faded in with the same progress as its
++// screen's card so it never bleeds into view ahead of its cue.
++function ScriptMark({ index, markRef }) {
+   return (
+     <div
++      ref={markRef}
+       aria-hidden="true"
+       style={{
+         position: 'absolute',
+         fontFamily: "'Dancing Script', cursive",
+         fontWeight: 700,
+         color: ACCENT,
+-        opacity: 0.07,
++        opacity: 0,
+         lineHeight: 1,
+         pointerEvents: 'none',
+         userSelect: 'none',
+@@ -99,6 +102,7 @@ export default function CinematicScene() {
+   const heroRightRef = useRef()
+   const readingRefs = useRef([])
+   const screenRefs = useRef([])
++  const markRefs = useRef([])
+ 
+   const [activeCategory, setActiveCategory] = useState(null)
+ 
+@@ -225,6 +229,9 @@ export default function CinematicScene() {
+       } else {
+         el.style.transform = `translateY(${(1 - p) * 30}px)`
+       }
++
++      const markEl = markRefs.current[i]
++      if (markEl) markEl.style.opacity = p * 0.07
+     }
+   })
+ 
+@@ -360,7 +367,7 @@ export default function CinematicScene() {
+         {/* ================================================== */}
+ 
+         <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+-          <ScriptMark index={0} />
++          <ScriptMark index={0} markRef={(el) => { markRefs.current[0] = el }} />
+           <div ref={(el) => { screenRefs.current[0] = el }} style={{ position: 'relative', zIndex: 1, maxWidth: '760px', padding: '0 6vw' }}>
+             <h2 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: 300, fontSize: 'clamp(2.2rem, 5vw, 4.5rem)', letterSpacing: '-0.03em', margin: '0 0 18px 0', lineHeight: 1.05 }}>
+               Build first.<br />Be seen later.
+@@ -376,7 +383,7 @@ export default function CinematicScene() {
+         {/* ================================================== */}
+ 
+         <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: '8vw' }}>
+-          <ScriptMark index={1} />
++          <ScriptMark index={1} markRef={(el) => { markRefs.current[1] = el }} />
+           <div ref={(el) => { screenRefs.current[1] = el }} style={cardShellStyle}>
+             <h3 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: '900', fontSize: '1.8rem', margin: '0 0 10px 0' }}>About Me</h3>
+             <h4 style={{ color: ACCENT, fontFamily: 'monospace', fontSize: '1rem', margin: '0 0 15px 0' }}>SOFTWARE ENGINEER</h4>
+@@ -391,7 +398,7 @@ export default function CinematicScene() {
+         {/* ================================================== */}
+ 
+         <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '8vw' }}>
+-          <ScriptMark index={2} />
++          <ScriptMark index={2} markRef={(el) => { markRefs.current[2] = el }} />
+           <div ref={(el) => { screenRefs.current[2] = el }} style={cardShellStyle}>
+             <h3 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: '900', fontSize: '1.8rem', margin: '0 0 6px 0' }}>Roots</h3>
+             <p style={{ color: 'rgba(231,229,228,0.6)', fontFamily: 'monospace', fontSize: '0.8rem', margin: '0 0 20px 0' }}>What holds up everything above ground.</p>
+@@ -409,7 +416,7 @@ export default function CinematicScene() {
+         {/* ================================================== */}
+ 
+         <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+-          <ScriptMark index={3} />
++          <ScriptMark index={3} markRef={(el) => { markRefs.current[3] = el }} />
+           <div ref={(el) => { screenRefs.current[3] = el }} style={{ ...cardShellStyle, maxWidth: '640px', width: '90%' }}>
+             <h3 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: '900', fontSize: '1.8rem', margin: '0 0 6px 0' }}>Readings</h3>
+             <p style={{ color: 'rgba(231,229,228,0.6)', fontFamily: 'monospace', fontSize: '0.8rem', margin: '0 0 20px 0' }}>A few numbers the seeds left behind.</p>
+@@ -426,7 +433,7 @@ export default function CinematicScene() {
+         {/* ================================================== */}
+ 
+         <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4vw' }}>
+-          <ScriptMark index={4} />
++          <ScriptMark index={4} markRef={(el) => { markRefs.current[4] = el }} />
+           <div ref={(el) => { screenRefs.current[4] = el }} style={{ width: '100%', maxWidth: '1000px', position: 'relative', zIndex: 1 }}>
+             <h2 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: '900', fontSize: '2.5rem', textAlign: 'center', margin: '0 0 6px 0' }}>Where the Seeds Landed</h2>
+             <p style={{ color: 'rgba(231,229,228,0.55)', fontFamily: 'monospace', fontSize: '0.85rem', textAlign: 'center', margin: '0 0 30px 0' }}>Same wind, different ground.</p>
+@@ -447,7 +454,7 @@ export default function CinematicScene() {
+         {/* ================================================== */}
+ 
+         <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+-          <ScriptMark index={5} />
++          <ScriptMark index={5} markRef={(el) => { markRefs.current[5] = el }} />
+           <div ref={(el) => { screenRefs.current[5] = el }} style={{ position: 'relative', zIndex: 1, maxWidth: '680px', padding: '0 6vw' }}>
+             <h2 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: 300, fontSize: 'clamp(2rem, 4.5vw, 3.8rem)', letterSpacing: '-0.03em', margin: '0 0 18px 0', lineHeight: 1.05 }}>
+               Be someone else's<br />first hop.
+@@ -481,4 +488,4 @@ export default function CinematicScene() {
+       <ExplosiveCategoryModal category={activeCategory} onClose={() => setActiveCategory(null)} />
+     </>
+   )
+-}
+\ No newline at end of file
++}
+diff --git a/3d-portfolio/src/components/DandelionHero.jsx b/3d-portfolio/src/components/DandelionHero.jsx
+index 740d36b..06cc2a4 100644
+--- a/3d-portfolio/src/components/DandelionHero.jsx
++++ b/3d-portfolio/src/components/DandelionHero.jsx
+@@ -74,13 +74,15 @@ const HEAD_RADIUS = 1.05
+ const HEAD_CENTER = new THREE.Vector3(0, 2.15, 0)
+ 
+ // Scroll offsets that drive the whole narrative beat-by-beat.
+-// These must stay inside CinematicScene's HERO_END window (0 - 0.30) —
+-// the hero/intro now only owns the first 30% of the scroll so the six
+-// copy screens that follow each get a full page of their own.
+-const RELEASE_START = 0.06
+-const RELEASE_END = 0.22
+-const BLOOM_START = 0.22
+-const BLOOM_END = 0.27
++// With ScrollControls pages={7} (1 hero div + 6 screen divs), the hero
++// div's own on-screen window is exactly offset 0 - 1/6 (~0.167) — that's
++// how much of the scroll it physically occupies before the next div's
++// top reaches the viewport top. These stay inside that window, and must
++// stay in sync with CinematicScene's matching constants.
++const RELEASE_START = 0.033
++const RELEASE_END = 0.122
++const BLOOM_START = 0.122
++const BLOOM_END = 0.15
+ 
+ export default function DandelionHero(props) {
+   const scroll = useScroll()
