@@ -1,539 +1,644 @@
-import { useRef, useState } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
-import { Scroll, useScroll, Environment } from '@react-three/drei'
-import * as THREE from 'three'
-import ExplosiveCategoryModal from './ExplosiveCategoryModal'
-import DandelionHero from './DandelionHero'
-import { projectCategories } from '../data/projectsData'
+import { useRef, useState } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { Scroll, useScroll } from '@react-three/drei';
+import * as THREE from 'three';
+import DandelionVoyage from './DandelionVoyage';
+import ExplosiveCategoryModal from './ExplosiveCategoryModal';
+import { projectCategories } from '../data/projectsData';
+import {
+  Code2,
+  Terminal,
+  Database,
+  Mail,
+  Copy,
+  Check,
+  GraduationCap,
+  Award,
+  Sparkles,
+  Server,
+  ArrowRight,
+  Cpu,
+  Layers,
+  Activity,
+  Shield,
+  Compass,
+  Zap,
+  ExternalLink
+} from 'lucide-react';
 
-// ============================================================
-// PALETTE
-// Cool blue-white accent (Flora's dominant tone) for chrome/UI —
-// the warm amber core/horizon glow stays as-is, it's the
-// intentional "fire front" ember the brief calls for.
-// ============================================================
-const ACCENT = '#9dd1ff'
-const ACCENT_DIM = '#4f86c4'
+export default function CinematicScene({
+  onScrollStateChange,
+  onSelectCategory,
+  onNavigateSection
+}) {
+  const scroll = useScroll();
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [aboutTab, setAboutTab] = useState('journey'); // 'journey' | 'philosophy' | 'lab'
+  const [featuredProjectIndex, setFeaturedProjectIndex] = useState(0);
 
-// ============================================================
-// SCROLL TIMELINE
-// ScrollControls pages={7} = 1 hero div + 6 screen divs. Native
-// scroll means each div's top reaches the viewport top after
-// exactly 1/6 of the total offset range — these boundaries are
-// physical fact, not a tuning choice, and must stay in sync with
-// DandelionHero's RELEASE/BLOOM consts.
-// ============================================================
-const IRIS_OPEN_END = 0.017
-const RELEASE_END = 0.122
-const BLOOM_START = 0.122
-const BLOOM_END = 0.15
-const IRIS_CLOSE_START = 0.15
-const HERO_END = 1 / 6
+  // References for hero text transitions
+  const heroLeftRef = useRef();
+  const heroRightRef = useRef();
+  const heroSubtitleRef = useRef();
 
-const SCREEN_COUNT = 6
-const SCREEN_SPAN = 1 / 6
+  const handleCopyEmail = () => {
+    navigator.clipboard.writeText('lesteralcantara1432@gmail.com');
+    setCopiedEmail(true);
+    setTimeout(() => setCopiedEmail(false), 2500);
+  };
 
-const READINGS = ['LAT 8.4803° N', 'SEED_COUNT 420', 'WIND 4kt NE', 'DRIFT +12%', '0x2F91', 'ALT 640m']
+  const handleOpenCategory = (cat) => {
+    setActiveCategory(cat);
+    if (onSelectCategory) onSelectCategory(cat);
+  };
 
-const SCREEN_CONFIG = [
-  { axis: 'none' },        // 0 — hook / tagline
-  { axis: 'x', from: -150 }, // 1 — about
-  { axis: 'x', from: 180 },  // 2 — roots
-  { axis: 'y', from: 80 },   // 3 — readings
-  { axis: 'y', from: 120 },  // 4 — where the seeds landed
-  { axis: 'none' }         // 5 — closing invitation
-]
-
-const SCRIPT_MARK_STYLE = [
-  { top: '-6vh', left: '-2vw', fontSize: '42vw', transform: 'rotate(-8deg)' },
-  { bottom: '-10vh', right: '-4vw', fontSize: '38vw', transform: 'rotate(6deg)' },
-  { top: '-8vh', right: '-3vw', fontSize: '40vw', transform: 'rotate(-5deg)' },
-  { bottom: '-8vh', left: '-3vw', fontSize: '36vw', transform: 'rotate(4deg)' },
-  { top: '-4vh', left: '50%', fontSize: '44vw', transform: 'translateX(-50%) rotate(0deg)' },
-  { bottom: '-10vh', left: '-2vw', fontSize: '40vw', transform: 'rotate(-6deg)' }
-]
-
-// A recurring script-S watermark — the "six screens of copy set
-// with a script S" from the brief. Same mark, repositioned and
-// rescaled per screen, and faded in with the same progress as its
-// screen's card so it never bleeds into view ahead of its cue.
-function ScriptMark({ index, markRef }) {
-  return (
-    <div
-      ref={markRef}
-      aria-hidden="true"
-      style={{
-        position: 'absolute',
-        fontFamily: "'Dancing Script', cursive",
-        fontWeight: 700,
-        color: ACCENT,
-        opacity: 0,
-        lineHeight: 1,
-        pointerEvents: 'none',
-        userSelect: 'none',
-        zIndex: 0,
-        ...SCRIPT_MARK_STYLE[index]
-      }}
-    >
-      S
-    </div>
-  )
-}
-
-const cardShellStyle = {
-  maxWidth: '600px',
-  background: 'linear-gradient(135deg, rgba(12, 16, 22, 0.85), rgba(5, 7, 10, 0.95))',
-  padding: '40px',
-  borderRadius: '20px',
-  border: `1px solid rgba(157, 209, 255, 0.25)`,
-  backdropFilter: 'blur(10px)',
-  position: 'relative',
-  zIndex: 1
-}
-
-export default function CinematicScene() {
-  const hudSectionRef = useRef()
-  const hudProgressRef = useRef()
-  const irisRef = useRef()
-  const scroll = useScroll()
-  const { camera } = useThree()
-
-  const heroLeftRef = useRef()
-  const heroRightRef = useRef()
-  const readingRefs = useRef([])
-  const screenRefs = useRef([])
-  const markRefs = useRef([])
-
-  const [activeCategory, setActiveCategory] = useState(null)
-
-  const scrollState = useRef({ progress: 0 })
+  // Flattened list of projects for the featured interactive showcase
+  const allProjects = projectCategories.flatMap((cat) => cat.projects);
+  const activeFeaturedProject = allProjects[featuredProjectIndex] || allProjects[0];
 
   useFrame((state) => {
-    const offset = scroll.offset
+    const offset = scroll.offset; // 0 to 1
 
-    scrollState.current.progress = THREE.MathUtils.lerp(
-      scrollState.current.progress,
-      offset,
-      0.1
-    )
-
-    // ==========================================================
-    // HUD STATE — 1 hero section + 6 copy screens = 7 total.
-    // ==========================================================
-
-    const sectionIndex = offset < HERO_END
-      ? 1
-      : 2 + Math.min(SCREEN_COUNT - 1, Math.floor((offset - HERO_END) / SCREEN_SPAN))
-    const progress = Math.max(0, Math.min(100, offset * 100))
-
-    if (hudSectionRef.current) hudSectionRef.current.textContent = `0${sectionIndex} / 07`
-    if (hudProgressRef.current) hudProgressRef.current.style.width = `${progress}%`
-
-    // ==========================================================
-    // KEYHOLE INTRO / IRIS OUTRO
-    //
-    // Opens onto the dandelion through a small aperture on its
-    // own (so a visitor who never scrolls still sees it open),
-    // stays open through the release + bloom, then closes down
-    // again like a camera iris before the written sections take
-    // over.
-    // ==========================================================
-
-    const autoOpen = Math.min(1, state.clock.elapsedTime / 1.4)
-
-    let radius
-    if (offset < IRIS_OPEN_END) {
-      const openT = Math.max(autoOpen, THREE.MathUtils.smoothstep(offset, 0, IRIS_OPEN_END))
-      radius = THREE.MathUtils.lerp(0, 140, openT)
-    } else if (offset < IRIS_CLOSE_START) {
-      radius = 140
-    } else if (offset < HERO_END) {
-      radius = THREE.MathUtils.lerp(140, 0, THREE.MathUtils.smoothstep(offset, IRIS_CLOSE_START, HERO_END))
-    } else {
-      radius = 0
+    // Update section index (1 to 7) based on scroll progress
+    const sectionIndex = Math.min(7, Math.max(1, Math.floor(offset * 6.99) + 1));
+    if (onScrollStateChange) {
+      onScrollStateChange(sectionIndex, offset);
     }
 
-    const overlayFade = offset < HERO_END
-      ? 1
-      : 1 - THREE.MathUtils.smoothstep(offset, HERO_END, HERO_END + 0.02)
+    // =========================================================================
+    // UNPREDICTABLE 3D SPATIAL CAMERA CHOREOGRAPHY
+    // Instead of scrolling down in a boring straight line, the camera weaves,
+    // swoops, climbs, banks, and catches cinematic vantage points through space!
+    // =========================================================================
 
-    if (irisRef.current) {
-      irisRef.current.style.background =
-        `radial-gradient(circle at 50% 46%, transparent 0%, transparent ${radius}%, #050403 ${radius + 0.6}%)`
-      irisRef.current.style.opacity = overlayFade
-    }
+    // Multi-harmonic curving trajectory
+    const t = offset; // 0.0 to 1.0
 
-    // ==========================================================
-    // HERO PROGRESS (dandelion pull-back + drift to corner)
-    // ==========================================================
+    // X: Weaves left on doctrine, arcs right on about, swoops left on roots, dives right on projects
+    const targetCamX =
+      Math.sin(t * Math.PI * 2.8) * 2.6 +
+      Math.cos(t * Math.PI * 5.2) * 0.9;
 
-    const heroProgress = THREE.MathUtils.clamp(offset / BLOOM_END, 0, 1)
-    const heroEase = THREE.MathUtils.smoothstep(heroProgress, 0, 1)
+    // Y: Climbs on seed launch, dips on about, elevates for wide roots, plunges for low-angle project hero
+    const targetCamY =
+      Math.sin(t * Math.PI * 3.4) * 1.6 -
+      t * 1.8 +
+      Math.cos(t * Math.PI * 1.8) * 0.6;
 
-    const heroCameraZ = THREE.MathUtils.lerp(5.5, 7.2, heroEase)
+    // Z: Dynamic depth push-in (macro detail) and pull-out (epic wide vista)
+    const targetCamZ =
+      7.6 -
+      Math.sin(t * Math.PI * 2.2) * 2.2 +
+      Math.sin(t * Math.PI * 6.0) * 0.7;
 
-    camera.position.x = THREE.MathUtils.lerp(camera.position.x, THREE.MathUtils.lerp(0, -1.4, heroEase), 0.08)
-    camera.position.y = THREE.MathUtils.lerp(camera.position.y, THREE.MathUtils.lerp(1.1, 1.7, heroEase), 0.08)
-    camera.position.z = THREE.MathUtils.lerp(camera.position.z, heroCameraZ, 0.08)
-    camera.lookAt(0, 1.3, 0)
+    // Look-At Target coordinates that weave asymmetrically with the seed cloud
+    const lookX = Math.sin(t * Math.PI * 2.5) * 1.4;
+    const lookY = 1.3 - t * 2.2 + Math.sin(t * Math.PI * 4) * 0.5;
+    const lookZ = Math.sin(t * Math.PI * 3) * 0.8;
 
-    // ==========================================================
-    // HERO TYPOGRAPHY
-    // ==========================================================
+    // Smooth lerp camera position with responsive mouse parallax
+    const mouseInfluenceX = state.pointer.x * 0.45;
+    const mouseInfluenceY = state.pointer.y * 0.35;
 
+    state.camera.position.x = THREE.MathUtils.lerp(
+      state.camera.position.x,
+      targetCamX + mouseInfluenceX,
+      0.06
+    );
+    state.camera.position.y = THREE.MathUtils.lerp(
+      state.camera.position.y,
+      targetCamY + mouseInfluenceY,
+      0.06
+    );
+    state.camera.position.z = THREE.MathUtils.lerp(
+      state.camera.position.z,
+      targetCamZ,
+      0.06
+    );
+
+    // Dynamic LookAt with soft tracking
+    const currentTarget = new THREE.Vector3(lookX, lookY, lookZ);
+    state.camera.lookAt(currentTarget);
+
+    // Subtle aerodynamic roll / banking angle on trajectory curves
+    const rollAngle =
+      Math.sin(t * Math.PI * 3.2) * 0.05 +
+      state.pointer.x * -0.03;
+    state.camera.rotation.z = THREE.MathUtils.lerp(
+      state.camera.rotation.z,
+      rollAngle,
+      0.05
+    );
+
+    // Hero Typography animation:
+    // Disperse smoothly outward and upward into the wind instead of colliding!
     if (heroLeftRef.current && heroRightRef.current) {
-      const leftX = THREE.MathUtils.lerp(0, -32, heroEase)
-      const rightX = THREE.MathUtils.lerp(0, 32, heroEase)
-
-      heroLeftRef.current.style.transform = `translate(${leftX}vw, -50%) rotate(${heroEase * -3}deg)`
-      heroRightRef.current.style.transform = `translate(${rightX}vw, -50%) rotate(${heroEase * 3}deg)`
-      heroLeftRef.current.style.opacity = 1 - THREE.MathUtils.smoothstep(offset, IRIS_CLOSE_START, HERO_END)
-      heroRightRef.current.style.opacity = heroLeftRef.current.style.opacity
-    }
-
-    // ==========================================================
-    // READINGS — "readings fly off with the petals". Small
-    // telemetry tags scatter outward from the bloom as it opens,
-    // then fade before the first copy screen arrives.
-    // ==========================================================
-
-    const bloomP = THREE.MathUtils.smoothstep(offset, BLOOM_START, BLOOM_END)
-    const readingFadeOut = 1 - THREE.MathUtils.smoothstep(offset, BLOOM_END, HERO_END + 0.02)
-    const readingOpacity = bloomP * readingFadeOut
-
-    readingRefs.current.forEach((el, i) => {
-      if (!el) return
-      const angle = (i / READINGS.length) * Math.PI * 2 + 0.4
-      const dist = 30 + bloomP * 150
-      el.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist * 0.55}px)`
-      el.style.opacity = readingOpacity * 0.85
-    })
-
-    // ==========================================================
-    // SIX COPY SCREENS — each fades/slides in over its own span.
-    // ==========================================================
-
-    for (let i = 0; i < SCREEN_COUNT; i++) {
-      const el = screenRefs.current[i]
-      if (!el) continue
-
-      const start = HERO_END + i * SCREEN_SPAN
-      const p = THREE.MathUtils.clamp((offset - start) / (SCREEN_SPAN * 0.6), 0, 1)
-      const cfg = SCREEN_CONFIG[i]
-
-      el.style.opacity = p
-      if (cfg.axis === 'x') {
-        el.style.transform = `translateX(${(1 - p) * cfg.from}px)`
-      } else if (cfg.axis === 'y') {
-        el.style.transform = `translateY(${(1 - p) * cfg.from}px)`
-      } else {
-        el.style.transform = `translateY(${(1 - p) * 30}px)`
+      const heroFadeOut = THREE.MathUtils.smoothstep(offset, 0.015, 0.13);
+      heroLeftRef.current.style.transform = `translate(-${heroFadeOut * 28}vw, -50%) rotate(${heroFadeOut * -6}deg)`;
+      heroRightRef.current.style.transform = `translate(${heroFadeOut * 28}vw, -50%) rotate(${heroFadeOut * 6}deg)`;
+      const opacity = Math.max(0, 1 - heroFadeOut * 1.2);
+      heroLeftRef.current.style.opacity = `${opacity}`;
+      heroRightRef.current.style.opacity = `${opacity}`;
+      if (heroSubtitleRef.current) {
+        heroSubtitleRef.current.style.opacity = `${Math.max(0, 1 - heroFadeOut * 1.6)}`;
+        heroSubtitleRef.current.style.transform = `translate(-50%, ${heroFadeOut * 45}px)`;
       }
-
-      const markEl = markRefs.current[i]
-      if (markEl) markEl.style.opacity = p * 0.07
     }
-  })
+  });
 
   return (
     <>
-      {/* Cool night ambient, plus a low warm line like a horizon fire.
-          Kept deliberately dim — the dandelion is mostly self-lit via
-          emissive materials, it doesn't need much external light, and
-          these were previously tuned for glass transmission which
-          needs a lot more punch than a particle object does. */}
-      <ambientLight intensity={0.12} color="#1a2230" />
-      <pointLight color="#d9770a" intensity={1.8} distance={10} decay={2} position={[3, -0.5, -2]} />
-      <pointLight color="#fff4df" intensity={2.5} distance={10} decay={2} position={[0, 3.5, 2]} />
-      <spotLight
-        color="#fffaf0"
-        intensity={4}
-        distance={12}
-        angle={Math.PI / 6}
-        penumbra={0.9}
-        decay={2}
-        position={[0.5, 6, 1.5]}
-        castShadow={false}
-      />
+      {/* 3D Scene Ambient & Directional Lighting */}
+      <ambientLight intensity={0.28} color="#1e293b" />
+      <directionalLight position={[6, 9, 5]} intensity={1.3} color="#bae6fd" />
+      <pointLight position={[-5, 3, -2]} intensity={0.9} color="#38bdf8" />
+      <pointLight position={[4, -2, 3]} intensity={0.7} color="#93c5fd" />
 
-      <DandelionHero position={[0, -0.75, 0]} />
+      {/* 3D Dandelion & Flight System */}
+      <DandelionVoyage />
 
-      {/* Not shown as a backdrop (background={false}) — this exists
-          purely so the bloom's transmission-glass petals have real
-          reflections/refraction to catch. Without it, transmission
-          materials render nearly invisible. */}
-      <Environment preset="night" background={false} />
-
-      {/* ================================================== */}
-      {/* KEYHOLE / IRIS OVERLAY                              */}
-      {/* ================================================== */}
-
-      <Scroll html style={{ width: '100%', zIndex: 10, position: 'relative' }}>
-        <div
-          ref={irisRef}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 90,
-            pointerEvents: 'none'
-          }}
-        />
-
-        <style>{`
-          .category-card {
-            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-            cursor: pointer;
-          }
-          .category-card:hover {
-            border-color: rgba(157, 209, 255, 0.7) !important;
-            transform: translateY(-6px) scale(1.02);
-            background: rgba(14, 19, 26, 0.95) !important;
-            box-shadow: 0 20px 40px rgba(157, 209, 255, 0.14);
-          }
-          .signal-btn {
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-          }
-          .signal-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 16px 32px rgba(157, 209, 255, 0.25);
-          }
-
-          /* Tablet: category grid drops from 3 columns to 2 */
-          @media (max-width: 1024px) {
-            .category-grid {
-              grid-template-columns: repeat(2, 1fr) !important;
-            }
-          }
-
-          /* Phone: the hero split-name, side-anchored cards, category
-             grid, and HUD margins all assume desktop width and will
-             overlap or overflow below this point. */
-          @media (max-width: 640px) {
-            .hero-name {
-              font-size: clamp(1.4rem, 8vw, 2.2rem) !important;
-            }
-            .screen-card {
-              max-width: 92vw !important;
-              width: 92vw !important;
-              padding: 24px !important;
-            }
-            .screen-side {
-              justify-content: center !important;
-              padding-left: 5vw !important;
-              padding-right: 5vw !important;
-            }
-            .category-grid {
-              grid-template-columns: 1fr !important;
-              gap: 14px !important;
-            }
-            .hud-margin-top {
-              top: 18px !important;
-            }
-            .hud-margin-left {
-              left: 18px !important;
-            }
-            .hud-margin-right {
-              right: 18px !important;
-            }
-            .hud-margin-bottom {
-              bottom: 18px !important;
-            }
-          }
-        `}</style>
-
-        {/* ====================================================== */}
-        {/* HUD */}
-        {/* ====================================================== */}
-
-        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 100 }}>
-          <div className="hud-margin-top hud-margin-left" style={{ position: 'absolute', top: '32px', left: '38px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <div style={{ color: '#f5f1ea', fontFamily: '"Helvetica Neue", Arial, sans-serif', fontSize: '0.85rem', fontWeight: 500, letterSpacing: '0.08em' }}>LA</div>
-            <div style={{ color: 'rgba(245,241,234,0.38)', fontFamily: 'monospace', fontSize: '0.55rem', letterSpacing: '0.18em' }}>SOFTWARE ENGINEER</div>
-          </div>
-
-          <div className="hud-margin-top hud-margin-right" style={{ position: 'absolute', top: '32px', right: '38px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ color: 'rgba(245,241,234,0.45)', fontFamily: 'monospace', fontSize: '0.55rem', letterSpacing: '0.15em' }}>INDEX</div>
-            <div ref={hudSectionRef} style={{ color: '#f5f1ea', fontFamily: 'monospace', fontSize: '0.7rem', letterSpacing: '0.12em' }}>01 / 07</div>
-          </div>
-
-          <div style={{ position: 'absolute', top: '60px', left: '38px', right: '38px', height: '1px', background: 'rgba(255,255,255,0.10)' }}>
-            <div ref={hudProgressRef} style={{ width: '0%', height: '100%', background: `linear-gradient(90deg, ${ACCENT_DIM}, ${ACCENT})`, boxShadow: `0 0 12px rgba(157,209,255,0.4)` }} />
-          </div>
-
-          <div className="hud-margin-bottom hud-margin-left" style={{ position: 'absolute', bottom: '32px', left: '38px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '28px', height: '1px', background: ACCENT }} />
-            <span style={{ color: 'rgba(245,241,234,0.5)', fontFamily: 'monospace', fontSize: '0.55rem', letterSpacing: '0.18em' }}>PORTFOLIO</span>
-          </div>
-
-          <div className="hud-margin-bottom hud-margin-right" style={{ position: 'absolute', bottom: '32px', right: '38px', color: 'rgba(245,241,234,0.38)', fontFamily: 'monospace', fontSize: '0.55rem', letterSpacing: '0.15em' }}>SCROLL TO EXPLORE</div>
-        </div>
-
+      {/* 2D HTML Narrative Scroll Container */}
+      <Scroll html style={{ width: '100%', position: 'relative', zIndex: 10 }}>
         {/* ================================================== */}
-        {/* HERO */}
+        {/* SCREEN 1: HERO OVERLAY                             */}
         {/* ================================================== */}
-
-        <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', pointerEvents: 'none' }}>
-          <div ref={heroLeftRef} style={{ position: 'absolute', right: '4vw', top: '50%', transform: 'translateY(-50%)', whiteSpace: 'nowrap', willChange: 'transform', zIndex: 2 }}>
-            <h1 className="hero-name" style={{ margin: 0, color: '#f2f0eb', fontFamily: '"Helvetica Neue", Arial, sans-serif', fontSize: 'clamp(3rem, 7vw, 8rem)', fontWeight: 300, letterSpacing: '-0.055em', lineHeight: 0.9, textShadow: '0 4px 30px rgba(0,0,0,0.65)' }}>LESTER</h1>
+        <section className="w-screen h-screen relative flex items-center justify-center overflow-hidden pointer-events-none select-none">
+          <div
+            ref={heroLeftRef}
+            className="absolute left-[4vw] sm:left-[8vw] top-1/2 -translate-y-1/2 pointer-events-none transition-transform will-change-transform"
+          >
+            <h1 className="text-zinc-100 font-sans font-light tracking-[-0.05em] text-[11vw] sm:text-[9vw] leading-none drop-shadow-[0_10px_40px_rgba(0,0,0,0.85)]">
+              ALCANTARA
+            </h1>
           </div>
 
-          <div ref={heroRightRef} style={{ position: 'absolute', left: '4vw', top: '50%', transform: 'translateY(-50%)', whiteSpace: 'nowrap', willChange: 'transform', zIndex: 2 }}>
-            <h1 className="hero-name" style={{ margin: 0, color: '#f2f0eb', fontFamily: '"Helvetica Neue", Arial, sans-serif', fontSize: 'clamp(3rem, 7vw, 8rem)', fontWeight: 300, letterSpacing: '-0.055em', lineHeight: 0.9, textShadow: '0 4px 30px rgba(0,0,0,0.65)' }}>ALCANTARA</h1>
+          <div
+            ref={heroRightRef}
+            className="absolute right-[4vw] sm:right-[8vw] top-1/2 -translate-y-1/2 pointer-events-none transition-transform will-change-transform"
+          >
+            <h1 className="text-zinc-100 font-sans font-light tracking-[-0.05em] text-[11vw] sm:text-[9vw] leading-none drop-shadow-[0_10px_40px_rgba(0,0,0,0.85)]">
+              LESTER
+            </h1>
           </div>
 
-          {/* "readings fly off with the petals" — small telemetry
-              tags scattering outward from the bloom as it opens. */}
-          <div style={{ position: 'absolute', left: '50%', top: '42%', width: 0, height: 0, zIndex: 3 }}>
-            {READINGS.map((r, i) => (
-              <span
-                key={r}
-                ref={(el) => { readingRefs.current[i] = el }}
-                style={{
-                  position: 'absolute',
-                  whiteSpace: 'nowrap',
-                  fontFamily: 'monospace',
-                  fontSize: '0.6rem',
-                  letterSpacing: '0.12em',
-                  color: ACCENT,
-                  opacity: 0
-                }}
-              >
-                {r}
-              </span>
-            ))}
-          </div>
-
-          <div style={{ position: 'absolute', left: '50%', bottom: '7vh', transform: 'translateX(-50%)', color: 'rgba(245, 240, 232, 0.45)', fontFamily: 'monospace', fontSize: '0.65rem', letterSpacing: '0.28em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-            Every build starts as a single seed
-          </div>
-
-          <div style={{ position: 'absolute', left: '50%', bottom: '3vh', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace', fontSize: '0.55rem', letterSpacing: '0.2em' }}>SCROLL</div>
-        </div>
-
-        {/* ================================================== */}
-        {/* SCREEN 0 — HOOK / TAGLINE                           */}
-        {/* ================================================== */}
-
-        <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-          <ScriptMark index={0} markRef={(el) => { markRefs.current[0] = el }} />
-          <div ref={(el) => { screenRefs.current[0] = el }} style={{ position: 'relative', zIndex: 1, maxWidth: '760px', padding: '0 6vw' }}>
-            <h2 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: 300, fontSize: 'clamp(2.2rem, 5vw, 4.5rem)', letterSpacing: '-0.03em', margin: '0 0 18px 0', lineHeight: 1.05 }}>
-              Build first.<br />Be seen later.
-            </h2>
-            <p style={{ color: 'rgba(231,229,228,0.6)', fontFamily: 'monospace', fontSize: '0.85rem', letterSpacing: '0.04em', margin: 0 }}>
-              Most of the work happens before anyone's watching. This is the part after.
+          {/* Subtitle & Scroll Invitation */}
+          <div
+            ref={heroSubtitleRef}
+            className="absolute bottom-14 sm:bottom-16 left-1/2 -translate-x-1/2 text-center flex flex-col items-center gap-2 pointer-events-auto px-4"
+          >
+            <p className="text-xs sm:text-sm font-mono tracking-[0.25em] text-zinc-400 uppercase text-center">
+              Every build starts as a single seed
             </p>
-          </div>
-        </div>
-
-        {/* ================================================== */}
-        {/* SCREEN 1 — ABOUT                                    */}
-        {/* ================================================== */}
-
-        <div className="screen-side" style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: '8vw' }}>
-          <ScriptMark index={1} markRef={(el) => { markRefs.current[1] = el }} />
-          <div ref={(el) => { screenRefs.current[1] = el }} className="screen-card" style={cardShellStyle}>
-            <h3 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: '900', fontSize: '1.8rem', margin: '0 0 10px 0' }}>About Me</h3>
-            <h4 style={{ color: ACCENT, fontFamily: 'monospace', fontSize: '1rem', margin: '0 0 15px 0' }}>SOFTWARE ENGINEER</h4>
-            <p style={{ color: '#e7e5e4', fontFamily: 'monospace', fontSize: '0.95rem', lineHeight: '1.7', margin: 0 }}>
-              Most of what I build looks like nothing for a long time — a schema, a script, a quiet service running in the dark. Then one day it opens: full-stack architecture, high-performance data systems, and interactive spatial engineering, all carried on the same wind until they land somewhere real.
-            </p>
-          </div>
-        </div>
-
-        {/* ================================================== */}
-        {/* SCREEN 2 — ROOTS / CREDENTIALS                      */}
-        {/* ================================================== */}
-
-        <div className="screen-side" style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '8vw' }}>
-          <ScriptMark index={2} markRef={(el) => { markRefs.current[2] = el }} />
-          <div ref={(el) => { screenRefs.current[2] = el }} className="screen-card" style={cardShellStyle}>
-            <h3 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: '900', fontSize: '1.8rem', margin: '0 0 6px 0' }}>Roots</h3>
-            <p style={{ color: 'rgba(231,229,228,0.6)', fontFamily: 'monospace', fontSize: '0.8rem', margin: '0 0 20px 0' }}>What holds up everything above ground.</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', fontFamily: 'monospace', fontSize: '0.9rem' }}>
-              <div><strong style={{ color: ACCENT }}>LANGUAGES:</strong> <span style={{ color: '#e7e5e4' }}>JavaScript, Python, C++</span></div>
-              <div><strong style={{ color: ACCENT }}>FRONTEND & 3D:</strong> <span style={{ color: '#e7e5e4' }}>React, Three.js, React Three Fiber</span></div>
-              <div><strong style={{ color: ACCENT }}>BACKEND:</strong> <span style={{ color: '#e7e5e4' }}>Node.js, Django, REST APIs</span></div>
-              <div><strong style={{ color: ACCENT }}>DATABASE:</strong> <span style={{ color: '#e7e5e4' }}>Supabase, PostgreSQL</span></div>
-            </div>
-          </div>
-        </div>
-
-        {/* ================================================== */}
-        {/* SCREEN 3 — READINGS                                 */}
-        {/* ================================================== */}
-
-        <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <ScriptMark index={3} markRef={(el) => { markRefs.current[3] = el }} />
-          <div ref={(el) => { screenRefs.current[3] = el }} className="screen-card" style={{ ...cardShellStyle, maxWidth: '640px', width: '90%' }}>
-            <h3 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: '900', fontSize: '1.8rem', margin: '0 0 6px 0' }}>Readings</h3>
-            <p style={{ color: 'rgba(231,229,228,0.6)', fontFamily: 'monospace', fontSize: '0.8rem', margin: '0 0 20px 0' }}>A few numbers the seeds left behind.</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', fontFamily: 'monospace', fontSize: '0.9rem' }}>
-              <div><strong style={{ color: ACCENT }}>2028 //</strong> <span style={{ color: '#e7e5e4' }}>Expected graduation, Computer Engineering, PHINMA CDO College</span></div>
-              <div><strong style={{ color: ACCENT }}>AWARD //</strong> <span style={{ color: '#e7e5e4' }}>City Scholar</span></div>
-              <div><strong style={{ color: ACCENT }}>SHIPPED //</strong> <span style={{ color: '#e7e5e4' }}>Multiple full-stack systems in active use, from cloud database cores to inventory dashboards</span></div>
-            </div>
-          </div>
-        </div>
-
-        {/* ================================================== */}
-        {/* SCREEN 4 — WHERE THE SEEDS LANDED                   */}
-        {/* ================================================== */}
-
-        <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4vw' }}>
-          <ScriptMark index={4} markRef={(el) => { markRefs.current[4] = el }} />
-          <div ref={(el) => { screenRefs.current[4] = el }} style={{ width: '100%', maxWidth: '1000px', position: 'relative', zIndex: 1 }}>
-            <h2 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: '900', fontSize: '2.5rem', textAlign: 'center', margin: '0 0 6px 0' }}>Where the Seeds Landed</h2>
-            <p style={{ color: 'rgba(231,229,228,0.55)', fontFamily: 'monospace', fontSize: '0.85rem', textAlign: 'center', margin: '0 0 30px 0' }}>Same wind, different ground.</p>
-            <div className="category-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-              {projectCategories.map((cat, idx) => (
-                <div key={cat.id} className="category-card" onClick={() => setActiveCategory(cat)} style={{ background: 'linear-gradient(135deg, rgba(12, 16, 22, 0.9), rgba(5, 7, 10, 0.95))', padding: '30px', borderRadius: '18px', border: `1px solid rgba(157, 209, 255, 0.3)` }}>
-                  <span style={{ color: ACCENT, fontFamily: 'monospace', fontSize: '0.8rem', fontWeight: 'bold' }}>0{idx + 1} //</span>
-                  <h3 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontSize: '1.3rem', fontWeight: '800', margin: '15px 0' }}>{cat.name}</h3>
-                  <div style={{ color: ACCENT, fontFamily: 'monospace', fontSize: '0.8rem', fontWeight: 'bold' }}>EXPLODE VIEW →</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ================================================== */}
-        {/* SCREEN 5 — CLOSING INVITATION                       */}
-        {/* ================================================== */}
-
-        <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-          <ScriptMark index={5} markRef={(el) => { markRefs.current[5] = el }} />
-          <div ref={(el) => { screenRefs.current[5] = el }} style={{ position: 'relative', zIndex: 1, maxWidth: '680px', padding: '0 6vw' }}>
-            <h2 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: 300, fontSize: 'clamp(2rem, 4.5vw, 3.8rem)', letterSpacing: '-0.03em', margin: '0 0 18px 0', lineHeight: 1.05 }}>
-              Be someone else's<br />first hop.
-            </h2>
-            <p style={{ color: 'rgba(231,229,228,0.6)', fontFamily: 'monospace', fontSize: '0.9rem', letterSpacing: '0.02em', margin: '0 0 34px 0' }}>
-              If something above is worth building on, this is where that starts.
-            </p>
-            {/* TODO: replace with your real contact address */}
-            <a
-              href="mailto:your-email@example.com"
-              className="signal-btn"
-              style={{
-                display: 'inline-block',
-                padding: '16px 38px',
-                borderRadius: '999px',
-                border: `1px solid ${ACCENT}`,
-                color: ACCENT,
-                fontFamily: 'monospace',
-                fontSize: '0.85rem',
-                letterSpacing: '0.12em',
-                textDecoration: 'none',
-                textTransform: 'uppercase'
-              }}
+            <button
+              onClick={() => onNavigateSection && onNavigateSection(1)}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/30 hover:border-sky-400/60 text-[11px] font-mono tracking-widest text-sky-300 cursor-pointer transition-all duration-200 group"
             >
-              Send a signal →
-            </a>
+              <span>SCROLL OR CLICK TO LAUNCH</span>
+              <span className="animate-bounce group-hover:translate-y-0.5 transition-transform">↓</span>
+            </button>
           </div>
-        </div>
+        </section>
+
+        {/* ================================================== */}
+        {/* SCREEN 2: CORE DOCTRINE / HOOK                     */}
+        {/* ================================================== */}
+        <section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-6 md:px-12 overflow-hidden">
+          <div className="max-w-2xl w-full text-center flex flex-col items-center gap-5 bg-zinc-950/75 border border-sky-400/20 p-6 sm:p-10 md:p-12 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-sky-950/40">
+            <span className="text-xs font-mono tracking-widest text-sky-400 uppercase flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              ENGINEERING PHILOSOPHY
+            </span>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-black font-sans text-white tracking-tight leading-tight">
+              Build first.<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-200 via-sky-400 to-cyan-300">
+                Be seen later.
+              </span>
+            </h2>
+            <p className="text-sm sm:text-base font-mono text-zinc-300 leading-relaxed max-w-xl">
+              Most of the work happens before anyone is watching — the database schemas, the query plans, the resilient background services running in the dark. This is the part after.
+            </p>
+            <div className="flex items-center gap-3 pt-2 text-xs font-mono text-zinc-500">
+              <span>01. ZERO DOWNTIME</span>
+              <span aria-hidden="true">·</span>
+              <span>02. DETERMINISTIC STATE</span>
+              <span aria-hidden="true">·</span>
+              <span>03. CLOUD SCALE</span>
+            </div>
+          </div>
+        </section>
+
+        {/* ================================================== */}
+        {/* SCREEN 3: ABOUT ME (RICH STORY & MOCK-UPS)         */}
+        {/* ================================================== */}
+        <section className="w-screen h-screen relative flex items-center justify-center sm:justify-start px-4 sm:px-10 md:px-20 overflow-hidden">
+          <div className="max-w-xl w-full bg-zinc-950/85 border border-sky-400/30 p-6 sm:p-9 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-black/80 flex flex-col gap-5">
+            {/* Header with Photo & Status */}
+            <div className="flex items-center gap-4 border-b border-white/10 pb-4">
+              <img
+                src="/profile.jpg"
+                alt="Lester Alcantara"
+                className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl object-cover border-2 border-sky-400/40 shadow-lg shadow-sky-500/20 shrink-0"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-2xl sm:text-3xl font-extrabold font-sans text-white tracking-tight">
+                    Lester Alcantara
+                  </h3>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Available for engineering roles" />
+                </div>
+                <span className="text-xs font-mono text-sky-400 font-semibold uppercase tracking-wider">
+                  Software Engineer & Computer Engineering Student
+                </span>
+                <span className="text-[11px] font-mono text-zinc-400 mt-0.5">
+                  PHINMA Cagayan de Oro College · Class of 2028
+                </span>
+              </div>
+            </div>
+
+            {/* Interactive Story Tabs */}
+            <div className="flex items-center gap-2 p-1 bg-black/40 rounded-xl border border-white/10">
+              <button
+                onClick={() => setAboutTab('journey')}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-mono font-medium transition-all ${
+                  aboutTab === 'journey'
+                    ? 'bg-sky-500/20 border border-sky-400/40 text-sky-200 shadow-sm'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                The Journey
+              </button>
+              <button
+                onClick={() => setAboutTab('philosophy')}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-mono font-medium transition-all ${
+                  aboutTab === 'philosophy'
+                    ? 'bg-sky-500/20 border border-sky-400/40 text-sky-200 shadow-sm'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                Philosophy
+              </button>
+              <button
+                onClick={() => setAboutTab('lab')}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-mono font-medium transition-all ${
+                  aboutTab === 'lab'
+                    ? 'bg-sky-500/20 border border-sky-400/40 text-sky-200 shadow-sm'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                Hardware Lab
+              </button>
+            </div>
+
+            {/* Tab Narrative Content */}
+            <div className="min-h-[140px] flex items-center">
+              {aboutTab === 'journey' && (
+                <div className="text-xs sm:text-sm font-mono text-zinc-300 leading-relaxed space-y-2">
+                  <p>
+                    I began exploring software by dismantling electronics and writing low-level C++ scripts. That fascination grew into architecting full-stack cloud ecosystems that handle commercial transactions, secure member databases, and reactive 3D WebGL experiences.
+                  </p>
+                  <p className="text-sky-300/90 text-xs">
+                    Every system I construct is grounded in rigorous database design, resilient state synchronizers, and sub-50ms latency benchmarks.
+                  </p>
+                </div>
+              )}
+
+              {aboutTab === 'philosophy' && (
+                <div className="text-xs sm:text-sm font-mono text-zinc-300 leading-relaxed space-y-2">
+                  <p>
+                    "Silent Infrastructure": The most important software in the world is the software people never have to think about because it never breaks.
+                  </p>
+                  <p className="text-sky-300/90 text-xs">
+                    I treat schema migrations, connection pooling, and optimistic UI rendering as foundational craftsmanship — building systems that stand firm under heavy daily loads.
+                  </p>
+                </div>
+              )}
+
+              {aboutTab === 'lab' && (
+                <div className="text-xs sm:text-sm font-mono text-zinc-300 leading-relaxed space-y-2">
+                  <p>
+                    Hands-on engineering lab in Cagayan de Oro: ESP32 microcontrollers, IoT sensor arrays, custom Linux development environments, and embedded C++ systems.
+                  </p>
+                  <p className="text-sky-300/90 text-xs">
+                    Bridging physical computing with cloud endpoints gives me a comprehensive understanding of computing from raw silicon transistors up to serverless cloud functions.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Metric Highlights Strip */}
+            <div className="pt-3 border-t border-white/10 grid grid-cols-3 gap-2 text-center font-mono">
+              <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                <div className="text-base sm:text-lg font-bold text-sky-300">10k+</div>
+                <div className="text-[10px] text-zinc-400 uppercase">Transactions</div>
+              </div>
+              <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                <div className="text-base sm:text-lg font-bold text-emerald-400">99.9%</div>
+                <div className="text-[10px] text-zinc-400 uppercase">Uptime Goal</div>
+              </div>
+              <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                <div className="text-base sm:text-lg font-bold text-cyan-300">&lt;50ms</div>
+                <div className="text-[10px] text-zinc-400 uppercase">Query Target</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ================================================== */}
+        {/* SCREEN 4: SYSTEM ROOTS (TECHNICAL CAPABILITIES)    */}
+        {/* ================================================== */}
+        <section className="w-screen h-screen relative flex items-center justify-center sm:justify-end px-4 sm:px-10 md:px-20 overflow-hidden">
+          <div className="max-w-xl w-full bg-zinc-950/85 border border-sky-400/30 p-6 sm:p-9 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-black/80 flex flex-col gap-5">
+            <div>
+              <span className="text-xs font-mono text-sky-400 uppercase tracking-widest font-semibold">
+                CORE CAPABILITIES
+              </span>
+              <h3 className="text-2xl sm:text-3xl font-extrabold font-sans text-white tracking-tight mt-1">
+                Roots
+              </h3>
+              <p className="text-xs font-mono text-zinc-400 mt-1">
+                The technical pillars holding up everything above ground.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs">
+              <div className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 transition-all flex flex-col gap-1.5">
+                <span className="text-sky-400 font-semibold tracking-wider flex items-center gap-1.5">
+                  <Terminal className="w-3.5 h-3.5" />
+                  LANGUAGES
+                </span>
+                <span className="text-zinc-200">JavaScript, Python, C++, TypeScript, SQL, Bash</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 transition-all flex flex-col gap-1.5">
+                <span className="text-sky-400 font-semibold tracking-wider flex items-center gap-1.5">
+                  <Code2 className="w-3.5 h-3.5" />
+                  FRONTEND & 3D
+                </span>
+                <span className="text-zinc-200">React, Three.js, React Three Fiber, Tailwind CSS, Vite</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 transition-all flex flex-col gap-1.5">
+                <span className="text-sky-400 font-semibold tracking-wider flex items-center gap-1.5">
+                  <Server className="w-3.5 h-3.5" />
+                  BACKEND & APIS
+                </span>
+                <span className="text-zinc-200">Node.js, Express, RESTful APIs, WebSockets, Django</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 transition-all flex flex-col gap-1.5">
+                <span className="text-sky-400 font-semibold tracking-wider flex items-center gap-1.5">
+                  <Database className="w-3.5 h-3.5" />
+                  DATABASE & CLOUD
+                </span>
+                <span className="text-zinc-200">Supabase, PostgreSQL, Relational Migrations, RLS Security</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 transition-all sm:col-span-2 flex flex-col gap-1.5">
+                <span className="text-cyan-400 font-semibold tracking-wider flex items-center gap-1.5">
+                  <Cpu className="w-3.5 h-3.5" />
+                  HARDWARE & SYSTEMS
+                </span>
+                <span className="text-zinc-300">
+                  ESP32 Microcontrollers, Digital Logic Design, Linux/UNIX Environments, Git Workflow
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ================================================== */}
+        {/* SCREEN 5: FEATURED PROJECTS SPOTLIGHT (INTERACTIVE) */}
+        {/* ================================================== */}
+        <section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-8 md:px-12 overflow-hidden">
+          <div className="max-w-5xl w-full bg-zinc-950/85 border border-sky-400/30 p-5 sm:p-8 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-black/90 flex flex-col gap-5">
+            {/* Header & Category Switcher */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+              <div>
+                <span className="text-xs font-mono text-sky-400 uppercase tracking-widest font-semibold flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5" />
+                  FEATURED SYSTEM SHOWCASE
+                </span>
+                <h3 className="text-xl sm:text-2xl font-bold font-sans text-white tracking-tight mt-0.5">
+                  Where the Seeds Landed
+                </h3>
+              </div>
+
+              {/* Project Selector Buttons */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {allProjects.map((p, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setFeaturedProjectIndex(idx)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all ${
+                      featuredProjectIndex === idx
+                        ? 'bg-sky-500 text-zinc-950 font-bold shadow-md shadow-sky-500/30'
+                        : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-200 border border-white/5'
+                    }`}
+                  >
+                    0{idx + 1}. {p.title.split(' ')[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Active Featured Project Stage */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+              {/* Left Column: Visual Showcase */}
+              <div className="md:col-span-6 relative group overflow-hidden rounded-xl border border-white/10 bg-black/50 shadow-inner">
+                <img
+                  src={activeFeaturedProject.image}
+                  alt={activeFeaturedProject.title}
+                  className="w-full h-44 sm:h-64 object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-70" />
+                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                  <span className="text-[11px] font-mono text-emerald-400 bg-black/70 px-2.5 py-1 rounded backdrop-blur-md border border-emerald-400/20">
+                    {activeFeaturedProject.status}
+                  </span>
+                  <span className="text-[11px] font-mono text-sky-300 bg-black/70 px-2.5 py-1 rounded backdrop-blur-md border border-sky-400/20">
+                    {activeFeaturedProject.metrics}
+                  </span>
+                </div>
+              </div>
+
+              {/* Right Column: Deep Architecture Intel */}
+              <div className="md:col-span-6 flex flex-col gap-3">
+                <div>
+                  <h4 className="text-lg sm:text-xl font-bold font-sans text-white">
+                    {activeFeaturedProject.title}
+                  </h4>
+                  <p className="text-xs font-mono text-sky-400 mt-0.5">
+                    {activeFeaturedProject.subtitle}
+                  </p>
+                </div>
+
+                <p className="text-xs sm:text-sm font-mono text-zinc-300 leading-relaxed line-clamp-3">
+                  {activeFeaturedProject.details}
+                </p>
+
+                {/* Highlights */}
+                {activeFeaturedProject.highlights && (
+                  <div className="space-y-1.5 mt-1">
+                    {activeFeaturedProject.highlights.slice(0, 2).map((h, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs font-mono text-zinc-300">
+                        <Check className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                        <span>{h}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Tech Stack Chips */}
+                <div className="flex flex-wrap gap-1.5 pt-2">
+                  {activeFeaturedProject.tech.slice(0, 4).map((t, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-0.5 rounded bg-sky-950/60 border border-sky-400/20 text-sky-200 text-[11px] font-mono"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Action Trigger */}
+                <div className="pt-2 flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      const matchedCat = projectCategories.find((cat) =>
+                        cat.projects.some((p) => p.title === activeFeaturedProject.title)
+                      );
+                      handleOpenCategory(matchedCat || projectCategories[0]);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/30 border border-sky-400/40 text-sky-200 text-xs font-mono font-semibold transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <span>EXPLODE ARCHITECTURE VIEW</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ================================================== */}
+        {/* SCREEN 6: READINGS & MILESTONES                    */}
+        {/* ================================================== */}
+        <section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-6 md:px-12 overflow-hidden">
+          <div className="max-w-2xl w-full bg-zinc-950/85 border border-sky-400/30 p-6 sm:p-10 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-black/80 flex flex-col gap-6">
+            <div className="border-b border-white/10 pb-4">
+              <span className="text-xs font-mono text-sky-400 uppercase tracking-widest font-semibold">
+                TELEMETRY & IMPACT
+              </span>
+              <h3 className="text-2xl sm:text-3xl font-extrabold font-sans text-white tracking-tight mt-1">
+                Readings
+              </h3>
+              <p className="text-xs font-mono text-zinc-400 mt-1">
+                Verified milestones and markers the seeds left behind.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 font-mono text-xs sm:text-sm">
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-zinc-900/60 border border-white/10 hover:border-sky-400/30 transition-all">
+                <GraduationCap className="w-5 h-5 text-sky-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-sky-300 font-semibold">2028 // EXPECTED GRADUATION</div>
+                  <div className="text-zinc-300 text-xs sm:text-sm mt-0.5">
+                    Bachelor of Science in Computer Engineering, PHINMA Cagayan de Oro College.
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-zinc-900/60 border border-white/10 hover:border-amber-400/30 transition-all">
+                <Award className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-amber-300 font-semibold">HONOR // CITY SCHOLAR</div>
+                  <div className="text-zinc-300 text-xs sm:text-sm mt-0.5">
+                    Awarded academic scholarship recognizing top engineering and scientific talent in the city.
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-zinc-900/60 border border-white/10 hover:border-emerald-400/30 transition-all">
+                <Server className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-emerald-300 font-semibold">SHIPPED // PRODUCTION SYSTEMS IN ACTIVE USE</div>
+                  <div className="text-zinc-300 text-xs sm:text-sm mt-0.5">
+                    Multiple full-stack cloud database cores, residential governance portals, and commercial inventory subsystems handling real transactions daily.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ================================================== */}
+        {/* SCREEN 7: TRANSMIT SIGNAL / CONTACT                */}
+        {/* ================================================== */}
+        <section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-6 md:px-12 overflow-hidden text-center">
+          <div className="max-w-2xl w-full flex flex-col items-center gap-6 bg-zinc-950/85 border border-sky-400/30 p-6 sm:p-12 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-sky-950/40">
+            <span className="text-xs font-mono text-sky-400 uppercase tracking-widest font-semibold flex items-center gap-1.5">
+              <Mail className="w-3.5 h-3.5" />
+              TRANSMIT A SIGNAL
+            </span>
+
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-light font-sans text-white tracking-tight leading-tight">
+              Be someone else's<br />
+              <span className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-200 via-sky-400 to-cyan-300">
+                first hop.
+              </span>
+            </h2>
+
+            <p className="text-xs sm:text-sm font-mono text-zinc-300 leading-relaxed max-w-lg">
+              If something above is worth building on, this is where that starts. Open for software engineering roles, cloud systems architecture, and spatial interface projects.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 mt-2 w-full justify-center">
+              <a
+                href="mailto:lesteralcantara1432@gmail.com"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-sky-500 hover:bg-sky-400 text-zinc-950 font-mono font-bold text-xs uppercase tracking-widest transition-all duration-200 shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Send a signal →</span>
+              </a>
+
+              <button
+                onClick={handleCopyEmail}
+                className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-zinc-900/80 hover:bg-zinc-800 border border-sky-400/30 text-sky-300 font-mono text-xs uppercase tracking-widest transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {copiedEmail ? (
+                  <>
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span>Copied to Clipboard!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span>Copy Address</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center gap-1 pt-2">
+              <div className="text-xs font-mono text-zinc-400">
+                lesteralcantara1432@gmail.com
+              </div>
+              <div className="text-[10px] font-mono text-zinc-600">
+                Cagayan de Oro, Northern Mindanao, Philippines (UTC+8)
+              </div>
+            </div>
+          </div>
+        </section>
       </Scroll>
 
-      <ExplosiveCategoryModal category={activeCategory} onClose={() => setActiveCategory(null)} />
+      {/* Render Category Modal */}
+      <ExplosiveCategoryModal
+        category={activeCategory}
+        onClose={() => setActiveCategory(null)}
+      />
     </>
-  )
+  );
 }

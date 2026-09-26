@@ -1,0 +1,6 @@
+{
+  "name": "Lester Alcantara - 3D Interactive Portfolio",
+  "description": "Interactive 3D dandelion-themed portfolio for Lester Alcantara, Software Engineer and Computer Engineering Student.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
