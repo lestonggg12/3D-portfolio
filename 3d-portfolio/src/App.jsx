@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { ScrollControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -17,12 +17,44 @@ export default function App() {
   }, []);
 
   const handleNavigateSection = useCallback((targetIndex) => {
-    const scrollableEl = document.querySelector('div[style*="overflow: auto"], div[style*="overflow-y: auto"], div[style*="overflow: scroll"]');
+    const scrollableEl = document.querySelector(
+      'div[style*="overflow: auto"], div[style*="overflow-y: auto"], div[style*="overflow: scroll"]'
+    );
     if (scrollableEl) {
       const scrollHeight = scrollableEl.scrollHeight - scrollableEl.clientHeight;
       const targetScroll = (targetIndex / 6) * scrollHeight;
       scrollableEl.scrollTo({ top: targetScroll, behavior: 'smooth' });
     }
+  }, []);
+
+  // Enable keyboard navigation (Arrow Down/Up, Spacebar, Page Down/Up)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (document.querySelector('[role="dialog"]')) return;
+
+      const scrollableEl = document.querySelector(
+        'div[style*="overflow: auto"], div[style*="overflow-y: auto"], div[style*="overflow: scroll"]'
+      );
+      if (!scrollableEl) return;
+
+      const step = window.innerHeight * 0.85;
+      if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        scrollableEl.scrollBy({ top: step, behavior: 'smooth' });
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault();
+        scrollableEl.scrollBy({ top: -step, behavior: 'smooth' });
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        scrollableEl.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        scrollableEl.scrollTo({ top: scrollableEl.scrollHeight, behavior: 'smooth' });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   return (
@@ -41,7 +73,7 @@ export default function App() {
         onNavigateSection={handleNavigateSection}
       />
 
-      {/* 3D WebGL Canvas Stage */}
+      {/* 3D WebGL Canvas Stage with Responsive ScrollControls */}
       <Canvas
         camera={{
           position: [0, 0, 8],
@@ -59,8 +91,12 @@ export default function App() {
           zIndex: 10
         }}
       >
-        <ScrollControls pages={7} damping={0.2}>
-          <CinematicScene onScrollStateChange={handleScrollStateChange} />
+        {/* damping={4} provides immediate, fluid scroll response */}
+        <ScrollControls pages={7} damping={4}>
+          <CinematicScene
+            onScrollStateChange={handleScrollStateChange}
+            onNavigateSection={handleNavigateSection}
+          />
         </ScrollControls>
       </Canvas>
     </div>
