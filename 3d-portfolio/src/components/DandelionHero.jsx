@@ -11,20 +11,42 @@ import * as THREE from 'three'
 
 function useSoftDotTexture() {
   return useMemo(() => {
-    const size = 64
+    const size = 128
     const canvas = document.createElement('canvas')
     canvas.width = size
     canvas.height = size
     const ctx = canvas.getContext('2d')
-    const g = ctx.createRadialGradient(
-      size / 2, size / 2, 0,
-      size / 2, size / 2, size / 2
-    )
-    g.addColorStop(0, 'rgba(255,255,255,1)')
-    g.addColorStop(0.4, 'rgba(255,255,255,0.6)')
-    g.addColorStop(1, 'rgba(255,255,255,0)')
-    ctx.fillStyle = g
-    ctx.fillRect(0, 0, size, size)
+    const cx = size / 2
+    const cy = size / 2
+
+    // Small soft center — the seed body itself.
+    const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.14)
+    core.addColorStop(0, 'rgba(255,255,255,0.95)')
+    core.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = core
+    ctx.beginPath()
+    ctx.arc(cx, cy, size * 0.14, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Radiating filament hairs — the pappus fringe that makes a
+    // dandelion seed read as fluffy rather than a plain glowing dot.
+    const filamentCount = 18
+    ctx.lineCap = 'round'
+    ctx.shadowColor = 'rgba(255,255,255,0.9)'
+    ctx.shadowBlur = 2
+    for (let i = 0; i < filamentCount; i++) {
+      const angle = (i / filamentCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.2
+      const len = size * 0.46 * (0.65 + Math.random() * 0.35)
+      const x2 = cx + Math.cos(angle) * len
+      const y2 = cy + Math.sin(angle) * len
+      ctx.strokeStyle = `rgba(255,255,255,${0.3 + Math.random() * 0.35})`
+      ctx.lineWidth = 1 + Math.random() * 0.6
+      ctx.beginPath()
+      ctx.moveTo(cx, cy)
+      ctx.lineTo(x2, y2)
+      ctx.stroke()
+    }
+
     return new THREE.CanvasTexture(canvas)
   }, [])
 }
@@ -245,7 +267,7 @@ export default function DandelionHero(props) {
       posAttr.array[i * 3 + 2] = basePositions[i * 3 + 2] + dir.z * flight + wobble
 
       sizeAttr.array[i] = (4 + (i % 4)) * (1 - localT * 0.7)
-      opacityAttr.array[i] = 0.7 * (1 - Math.pow(localT, 1.5))
+      opacityAttr.array[i] = 0.4 * (1 - Math.pow(localT, 1.5))
     }
 
     posAttr.needsUpdate = true
@@ -309,16 +331,17 @@ export default function DandelionHero(props) {
       {/* ============================================== */}
 
       <group ref={bloomGroupRef} position={HEAD_CENTER} scale={0}>
-        {/* Soft glow halo behind the petal cluster — reads as a
-            luminous bloom rather than a lit solid shape, echoing
-            the seed head's own glow treatment below. */}
+        {/* Soft glow halo behind the petal cluster — kept subtle;
+            additive blending here plus the glass material's own
+            emissive glow blows out fast, so this uses normal
+            blending at low opacity instead. */}
         <mesh>
-          <sphereGeometry args={[0.42, 16, 16]} />
-          <meshBasicMaterial color="#ffcf7a" transparent opacity={0.16} depthWrite={false} blending={THREE.AdditiveBlending} />
+          <sphereGeometry args={[0.32, 16, 16]} />
+          <meshBasicMaterial color="#ffcf7a" transparent opacity={0.08} depthWrite={false} />
         </mesh>
         <mesh>
-          <sphereGeometry args={[0.65, 16, 16]} />
-          <meshBasicMaterial color="#ffe9b0" transparent opacity={0.07} depthWrite={false} blending={THREE.AdditiveBlending} />
+          <sphereGeometry args={[0.5, 16, 16]} />
+          <meshBasicMaterial color="#ffe9b0" transparent opacity={0.035} depthWrite={false} />
         </mesh>
 
         {petals.map((p, i) => (
@@ -335,13 +358,13 @@ export default function DandelionHero(props) {
             <meshPhysicalMaterial
               color="#fff3e0"
               emissive="#e6a94a"
-              emissiveIntensity={0.3}
-              roughness={0.1}
-              transmission={0.9}
+              emissiveIntensity={0.15}
+              roughness={0.18}
+              transmission={0.75}
               thickness={0.4}
               ior={1.45}
-              clearcoat={0.6}
-              clearcoatRoughness={0.15}
+              clearcoat={0.5}
+              clearcoatRoughness={0.2}
               side={THREE.DoubleSide}
             />
           </mesh>

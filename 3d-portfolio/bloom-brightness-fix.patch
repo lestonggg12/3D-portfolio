@@ -1,0 +1,374 @@
+diff --git a/3d-portfolio/src/components/CinematicScene.jsx b/3d-portfolio/src/components/CinematicScene.jsx
+index 37986d7..e0e99f4 100644
+--- a/3d-portfolio/src/components/CinematicScene.jsx
++++ b/3d-portfolio/src/components/CinematicScene.jsx
+@@ -1,6 +1,6 @@
+ import { useRef, useState } from 'react'
+ import { useFrame, useThree } from '@react-three/fiber'
+-import { Scroll, useScroll } from '@react-three/drei'
++import { Scroll, useScroll, Environment } from '@react-three/drei'
+ import * as THREE from 'three'
+ import ExplosiveCategoryModal from './ExplosiveCategoryModal'
+ import DandelionHero from './DandelionHero'
+@@ -17,20 +17,21 @@ const ACCENT_DIM = '#4f86c4'
+ 
+ // ============================================================
+ // SCROLL TIMELINE
+-// The dandelion intro now only owns the first 30% of the scroll
+-// (HERO_END). Everything after that is six equal copy screens,
+-// each getting its own full page of scroll to breathe.
+-// These must stay in sync with DandelionHero's RELEASE/BLOOM consts.
++// ScrollControls pages={7} = 1 hero div + 6 screen divs. Native
++// scroll means each div's top reaches the viewport top after
++// exactly 1/6 of the total offset range — these boundaries are
++// physical fact, not a tuning choice, and must stay in sync with
++// DandelionHero's RELEASE/BLOOM consts.
+ // ============================================================
+-const IRIS_OPEN_END = 0.03
+-const RELEASE_END = 0.22
+-const BLOOM_START = 0.22
+-const BLOOM_END = 0.27
+-const IRIS_CLOSE_START = 0.27
+-const HERO_END = 0.30
++const IRIS_OPEN_END = 0.017
++const RELEASE_END = 0.122
++const BLOOM_START = 0.122
++const BLOOM_END = 0.15
++const IRIS_CLOSE_START = 0.15
++const HERO_END = 1 / 6
+ 
+ const SCREEN_COUNT = 6
+-const SCREEN_SPAN = (1 - HERO_END) / SCREEN_COUNT
++const SCREEN_SPAN = 1 / 6
+ 
+ const READINGS = ['LAT 8.4803° N', 'SEED_COUNT 420', 'WIND 4kt NE', 'DRIFT +12%', '0x2F91', 'ALT 640m']
+ 
+@@ -54,17 +55,19 @@ const SCRIPT_MARK_STYLE = [
+ 
+ // A recurring script-S watermark — the "six screens of copy set
+ // with a script S" from the brief. Same mark, repositioned and
+-// rescaled per screen so it never reads as static wallpaper.
+-function ScriptMark({ index }) {
++// rescaled per screen, and faded in with the same progress as its
++// screen's card so it never bleeds into view ahead of its cue.
++function ScriptMark({ index, markRef }) {
+   return (
+     <div
++      ref={markRef}
+       aria-hidden="true"
+       style={{
+         position: 'absolute',
+         fontFamily: "'Dancing Script', cursive",
+         fontWeight: 700,
+         color: ACCENT,
+-        opacity: 0.07,
++        opacity: 0,
+         lineHeight: 1,
+         pointerEvents: 'none',
+         userSelect: 'none',
+@@ -99,6 +102,7 @@ export default function CinematicScene() {
+   const heroRightRef = useRef()
+   const readingRefs = useRef([])
+   const screenRefs = useRef([])
++  const markRefs = useRef([])
+ 
+   const [activeCategory, setActiveCategory] = useState(null)
+ 
+@@ -225,6 +229,9 @@ export default function CinematicScene() {
+       } else {
+         el.style.transform = `translateY(${(1 - p) * 30}px)`
+       }
++
++      const markEl = markRefs.current[i]
++      if (markEl) markEl.style.opacity = p * 0.07
+     }
+   })
+ 
+@@ -251,6 +258,12 @@ export default function CinematicScene() {
+ 
+       <DandelionHero position={[0, -0.75, 0]} />
+ 
++      {/* Not shown as a backdrop (background={false}) — this exists
++          purely so the bloom's transmission-glass petals have real
++          reflections/refraction to catch. Without it, transmission
++          materials render nearly invisible. */}
++      <Environment preset="night" background={false} />
++
+       {/* ================================================== */}
+       {/* KEYHOLE / IRIS OVERLAY                              */}
+       {/* ================================================== */}
+@@ -284,6 +297,48 @@ export default function CinematicScene() {
+             transform: translateY(-3px);
+             box-shadow: 0 16px 32px rgba(157, 209, 255, 0.25);
+           }
++
++          /* Tablet: category grid drops from 3 columns to 2 */
++          @media (max-width: 1024px) {
++            .category-grid {
++              grid-template-columns: repeat(2, 1fr) !important;
++            }
++          }
++
++          /* Phone: the hero split-name, side-anchored cards, category
++             grid, and HUD margins all assume desktop width and will
++             overlap or overflow below this point. */
++          @media (max-width: 640px) {
++            .hero-name {
++              font-size: clamp(1.4rem, 8vw, 2.2rem) !important;
++            }
++            .screen-card {
++              max-width: 92vw !important;
++              width: 92vw !important;
++              padding: 24px !important;
++            }
++            .screen-side {
++              justify-content: center !important;
++              padding-left: 5vw !important;
++              padding-right: 5vw !important;
++            }
++            .category-grid {
++              grid-template-columns: 1fr !important;
++              gap: 14px !important;
++            }
++            .hud-margin-top {
++              top: 18px !important;
++            }
++            .hud-margin-left {
++              left: 18px !important;
++            }
++            .hud-margin-right {
++              right: 18px !important;
++            }
++            .hud-margin-bottom {
++              bottom: 18px !important;
++            }
++          }
+         `}</style>
+ 
+         {/* ====================================================== */}
+@@ -291,12 +346,12 @@ export default function CinematicScene() {
+         {/* ====================================================== */}
+ 
+         <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 100 }}>
+-          <div style={{ position: 'absolute', top: '32px', left: '38px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
++          <div className="hud-margin-top hud-margin-left" style={{ position: 'absolute', top: '32px', left: '38px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+             <div style={{ color: '#f5f1ea', fontFamily: '"Helvetica Neue", Arial, sans-serif', fontSize: '0.85rem', fontWeight: 500, letterSpacing: '0.08em' }}>LA</div>
+             <div style={{ color: 'rgba(245,241,234,0.38)', fontFamily: 'monospace', fontSize: '0.55rem', letterSpacing: '0.18em' }}>SOFTWARE ENGINEER</div>
+           </div>
+ 
+-          <div style={{ position: 'absolute', top: '32px', right: '38px', display: 'flex', alignItems: 'center', gap: '16px' }}>
++          <div className="hud-margin-top hud-margin-right" style={{ position: 'absolute', top: '32px', right: '38px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+             <div style={{ color: 'rgba(245,241,234,0.45)', fontFamily: 'monospace', fontSize: '0.55rem', letterSpacing: '0.15em' }}>INDEX</div>
+             <div ref={hudSectionRef} style={{ color: '#f5f1ea', fontFamily: 'monospace', fontSize: '0.7rem', letterSpacing: '0.12em' }}>01 / 07</div>
+           </div>
+@@ -305,12 +360,12 @@ export default function CinematicScene() {
+             <div ref={hudProgressRef} style={{ width: '0%', height: '100%', background: `linear-gradient(90deg, ${ACCENT_DIM}, ${ACCENT})`, boxShadow: `0 0 12px rgba(157,209,255,0.4)` }} />
+           </div>
+ 
+-          <div style={{ position: 'absolute', bottom: '32px', left: '38px', display: 'flex', alignItems: 'center', gap: '12px' }}>
++          <div className="hud-margin-bottom hud-margin-left" style={{ position: 'absolute', bottom: '32px', left: '38px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+             <div style={{ width: '28px', height: '1px', background: ACCENT }} />
+             <span style={{ color: 'rgba(245,241,234,0.5)', fontFamily: 'monospace', fontSize: '0.55rem', letterSpacing: '0.18em' }}>PORTFOLIO</span>
+           </div>
+ 
+-          <div style={{ position: 'absolute', bottom: '32px', right: '38px', color: 'rgba(245,241,234,0.38)', fontFamily: 'monospace', fontSize: '0.55rem', letterSpacing: '0.15em' }}>SCROLL TO EXPLORE</div>
++          <div className="hud-margin-bottom hud-margin-right" style={{ position: 'absolute', bottom: '32px', right: '38px', color: 'rgba(245,241,234,0.38)', fontFamily: 'monospace', fontSize: '0.55rem', letterSpacing: '0.15em' }}>SCROLL TO EXPLORE</div>
+         </div>
+ 
+         {/* ================================================== */}
+@@ -319,11 +374,11 @@ export default function CinematicScene() {
+ 
+         <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', pointerEvents: 'none' }}>
+           <div ref={heroLeftRef} style={{ position: 'absolute', right: '4vw', top: '50%', transform: 'translateY(-50%)', whiteSpace: 'nowrap', willChange: 'transform', zIndex: 2 }}>
+-            <h1 style={{ margin: 0, color: '#f2f0eb', fontFamily: '"Helvetica Neue", Arial, sans-serif', fontSize: 'clamp(3rem, 7vw, 8rem)', fontWeight: 300, letterSpacing: '-0.055em', lineHeight: 0.9, textShadow: '0 4px 30px rgba(0,0,0,0.65)' }}>LESTER</h1>
++            <h1 className="hero-name" style={{ margin: 0, color: '#f2f0eb', fontFamily: '"Helvetica Neue", Arial, sans-serif', fontSize: 'clamp(3rem, 7vw, 8rem)', fontWeight: 300, letterSpacing: '-0.055em', lineHeight: 0.9, textShadow: '0 4px 30px rgba(0,0,0,0.65)' }}>LESTER</h1>
+           </div>
+ 
+           <div ref={heroRightRef} style={{ position: 'absolute', left: '4vw', top: '50%', transform: 'translateY(-50%)', whiteSpace: 'nowrap', willChange: 'transform', zIndex: 2 }}>
+-            <h1 style={{ margin: 0, color: '#f2f0eb', fontFamily: '"Helvetica Neue", Arial, sans-serif', fontSize: 'clamp(3rem, 7vw, 8rem)', fontWeight: 300, letterSpacing: '-0.055em', lineHeight: 0.9, textShadow: '0 4px 30px rgba(0,0,0,0.65)' }}>ALCANTARA</h1>
++            <h1 className="hero-name" style={{ margin: 0, color: '#f2f0eb', fontFamily: '"Helvetica Neue", Arial, sans-serif', fontSize: 'clamp(3rem, 7vw, 8rem)', fontWeight: 300, letterSpacing: '-0.055em', lineHeight: 0.9, textShadow: '0 4px 30px rgba(0,0,0,0.65)' }}>ALCANTARA</h1>
+           </div>
+ 
+           {/* "readings fly off with the petals" — small telemetry
+@@ -360,7 +415,7 @@ export default function CinematicScene() {
+         {/* ================================================== */}
+ 
+         <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+-          <ScriptMark index={0} />
++          <ScriptMark index={0} markRef={(el) => { markRefs.current[0] = el }} />
+           <div ref={(el) => { screenRefs.current[0] = el }} style={{ position: 'relative', zIndex: 1, maxWidth: '760px', padding: '0 6vw' }}>
+             <h2 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: 300, fontSize: 'clamp(2.2rem, 5vw, 4.5rem)', letterSpacing: '-0.03em', margin: '0 0 18px 0', lineHeight: 1.05 }}>
+               Build first.<br />Be seen later.
+@@ -375,9 +430,9 @@ export default function CinematicScene() {
+         {/* SCREEN 1 — ABOUT                                    */}
+         {/* ================================================== */}
+ 
+-        <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: '8vw' }}>
+-          <ScriptMark index={1} />
+-          <div ref={(el) => { screenRefs.current[1] = el }} style={cardShellStyle}>
++        <div className="screen-side" style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: '8vw' }}>
++          <ScriptMark index={1} markRef={(el) => { markRefs.current[1] = el }} />
++          <div ref={(el) => { screenRefs.current[1] = el }} className="screen-card" style={cardShellStyle}>
+             <h3 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: '900', fontSize: '1.8rem', margin: '0 0 10px 0' }}>About Me</h3>
+             <h4 style={{ color: ACCENT, fontFamily: 'monospace', fontSize: '1rem', margin: '0 0 15px 0' }}>SOFTWARE ENGINEER</h4>
+             <p style={{ color: '#e7e5e4', fontFamily: 'monospace', fontSize: '0.95rem', lineHeight: '1.7', margin: 0 }}>
+@@ -390,9 +445,9 @@ export default function CinematicScene() {
+         {/* SCREEN 2 — ROOTS / CREDENTIALS                      */}
+         {/* ================================================== */}
+ 
+-        <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '8vw' }}>
+-          <ScriptMark index={2} />
+-          <div ref={(el) => { screenRefs.current[2] = el }} style={cardShellStyle}>
++        <div className="screen-side" style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '8vw' }}>
++          <ScriptMark index={2} markRef={(el) => { markRefs.current[2] = el }} />
++          <div ref={(el) => { screenRefs.current[2] = el }} className="screen-card" style={cardShellStyle}>
+             <h3 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: '900', fontSize: '1.8rem', margin: '0 0 6px 0' }}>Roots</h3>
+             <p style={{ color: 'rgba(231,229,228,0.6)', fontFamily: 'monospace', fontSize: '0.8rem', margin: '0 0 20px 0' }}>What holds up everything above ground.</p>
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+@@ -409,8 +464,8 @@ export default function CinematicScene() {
+         {/* ================================================== */}
+ 
+         <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+-          <ScriptMark index={3} />
+-          <div ref={(el) => { screenRefs.current[3] = el }} style={{ ...cardShellStyle, maxWidth: '640px', width: '90%' }}>
++          <ScriptMark index={3} markRef={(el) => { markRefs.current[3] = el }} />
++          <div ref={(el) => { screenRefs.current[3] = el }} className="screen-card" style={{ ...cardShellStyle, maxWidth: '640px', width: '90%' }}>
+             <h3 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: '900', fontSize: '1.8rem', margin: '0 0 6px 0' }}>Readings</h3>
+             <p style={{ color: 'rgba(231,229,228,0.6)', fontFamily: 'monospace', fontSize: '0.8rem', margin: '0 0 20px 0' }}>A few numbers the seeds left behind.</p>
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+@@ -426,11 +481,11 @@ export default function CinematicScene() {
+         {/* ================================================== */}
+ 
+         <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4vw' }}>
+-          <ScriptMark index={4} />
++          <ScriptMark index={4} markRef={(el) => { markRefs.current[4] = el }} />
+           <div ref={(el) => { screenRefs.current[4] = el }} style={{ width: '100%', maxWidth: '1000px', position: 'relative', zIndex: 1 }}>
+             <h2 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: '900', fontSize: '2.5rem', textAlign: 'center', margin: '0 0 6px 0' }}>Where the Seeds Landed</h2>
+             <p style={{ color: 'rgba(231,229,228,0.55)', fontFamily: 'monospace', fontSize: '0.85rem', textAlign: 'center', margin: '0 0 30px 0' }}>Same wind, different ground.</p>
+-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
++            <div className="category-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+               {projectCategories.map((cat, idx) => (
+                 <div key={cat.id} className="category-card" onClick={() => setActiveCategory(cat)} style={{ background: 'linear-gradient(135deg, rgba(12, 16, 22, 0.9), rgba(5, 7, 10, 0.95))', padding: '30px', borderRadius: '18px', border: `1px solid rgba(157, 209, 255, 0.3)` }}>
+                   <span style={{ color: ACCENT, fontFamily: 'monospace', fontSize: '0.8rem', fontWeight: 'bold' }}>0{idx + 1} //</span>
+@@ -447,7 +502,7 @@ export default function CinematicScene() {
+         {/* ================================================== */}
+ 
+         <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+-          <ScriptMark index={5} />
++          <ScriptMark index={5} markRef={(el) => { markRefs.current[5] = el }} />
+           <div ref={(el) => { screenRefs.current[5] = el }} style={{ position: 'relative', zIndex: 1, maxWidth: '680px', padding: '0 6vw' }}>
+             <h2 style={{ color: '#f5f5f4', fontFamily: '"Helvetica Neue", sans-serif', fontWeight: 300, fontSize: 'clamp(2rem, 4.5vw, 3.8rem)', letterSpacing: '-0.03em', margin: '0 0 18px 0', lineHeight: 1.05 }}>
+               Be someone else's<br />first hop.
+@@ -481,4 +536,4 @@ export default function CinematicScene() {
+       <ExplosiveCategoryModal category={activeCategory} onClose={() => setActiveCategory(null)} />
+     </>
+   )
+-}
+\ No newline at end of file
++}
+diff --git a/3d-portfolio/src/components/DandelionHero.jsx b/3d-portfolio/src/components/DandelionHero.jsx
+index 740d36b..70dcb06 100644
+--- a/3d-portfolio/src/components/DandelionHero.jsx
++++ b/3d-portfolio/src/components/DandelionHero.jsx
+@@ -74,13 +74,15 @@ const HEAD_RADIUS = 1.05
+ const HEAD_CENTER = new THREE.Vector3(0, 2.15, 0)
+ 
+ // Scroll offsets that drive the whole narrative beat-by-beat.
+-// These must stay inside CinematicScene's HERO_END window (0 - 0.30) —
+-// the hero/intro now only owns the first 30% of the scroll so the six
+-// copy screens that follow each get a full page of their own.
+-const RELEASE_START = 0.06
+-const RELEASE_END = 0.22
+-const BLOOM_START = 0.22
+-const BLOOM_END = 0.27
++// With ScrollControls pages={7} (1 hero div + 6 screen divs), the hero
++// div's own on-screen window is exactly offset 0 - 1/6 (~0.167) — that's
++// how much of the scroll it physically occupies before the next div's
++// top reaches the viewport top. These stay inside that window, and must
++// stay in sync with CinematicScene's matching constants.
++const RELEASE_START = 0.033
++const RELEASE_END = 0.122
++const BLOOM_START = 0.122
++const BLOOM_END = 0.15
+ 
+ export default function DandelionHero(props) {
+   const scroll = useScroll()
+@@ -176,6 +178,21 @@ export default function DandelionHero(props) {
+   // BLOOM PETALS — appear where the core was once seeds finish.
+   // ============================================================
+ 
++  // Petal profile: a curved teardrop instead of a straight-sided
++  // cone — base near the stem, bulges outward, tapers to a soft
++  // point. Rotated around Y with 32 segments for a smooth, glassy
++  // silhouette instead of the previous faceted 8-sided cone.
++  const petalGeometry = useMemo(() => {
++    const profile = [
++      new THREE.Vector2(0.02, 0),
++      new THREE.Vector2(0.13, 0.07),
++      new THREE.Vector2(0.165, 0.2),
++      new THREE.Vector2(0.13, 0.36),
++      new THREE.Vector2(0.05, 0.49),
++      new THREE.Vector2(0.0, 0.56)
++    ]
++    return new THREE.LatheGeometry(profile, 32)
++  }, [])
+   const petalCount = 10
+   const petals = useMemo(
+     () => new Array(petalCount).fill(0).map((_, i) => ({
+@@ -228,7 +245,7 @@ export default function DandelionHero(props) {
+       posAttr.array[i * 3 + 2] = basePositions[i * 3 + 2] + dir.z * flight + wobble
+ 
+       sizeAttr.array[i] = (4 + (i % 4)) * (1 - localT * 0.7)
+-      opacityAttr.array[i] = 0.7 * (1 - Math.pow(localT, 1.5))
++      opacityAttr.array[i] = 0.4 * (1 - Math.pow(localT, 1.5))
+     }
+ 
+     posAttr.needsUpdate = true
+@@ -292,9 +309,23 @@ export default function DandelionHero(props) {
+       {/* ============================================== */}
+ 
+       <group ref={bloomGroupRef} position={HEAD_CENTER} scale={0}>
++        {/* Soft glow halo behind the petal cluster — kept subtle;
++            additive blending here plus the glass material's own
++            emissive glow blows out fast, so this uses normal
++            blending at low opacity instead. */}
++        <mesh>
++          <sphereGeometry args={[0.32, 16, 16]} />
++          <meshBasicMaterial color="#ffcf7a" transparent opacity={0.08} depthWrite={false} />
++        </mesh>
++        <mesh>
++          <sphereGeometry args={[0.5, 16, 16]} />
++          <meshBasicMaterial color="#ffe9b0" transparent opacity={0.035} depthWrite={false} />
++        </mesh>
++
+         {petals.map((p, i) => (
+           <mesh
+             key={i}
++            geometry={petalGeometry}
+             rotation={[p.tilt, p.angle, 0]}
+             position={[
+               Math.cos(p.angle) * 0.05,
+@@ -302,15 +333,17 @@ export default function DandelionHero(props) {
+               Math.sin(p.angle) * 0.05
+             ]}
+           >
+-            <coneGeometry args={[0.16, 0.55, 8, 1, true]} />
+             <meshPhysicalMaterial
+-              color="#fbe7c6"
++              color="#fff3e0"
+               emissive="#e6a94a"
+-              emissiveIntensity={0.25}
+-              roughness={0.4}
++              emissiveIntensity={0.15}
++              roughness={0.18}
++              transmission={0.75}
++              thickness={0.4}
++              ior={1.45}
++              clearcoat={0.5}
++              clearcoatRoughness={0.2}
+               side={THREE.DoubleSide}
+-              transparent
+-              opacity={0.92}
+             />
+           </mesh>
+         ))}

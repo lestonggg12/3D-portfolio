@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Scroll, useScroll } from '@react-three/drei'
+import { Scroll, useScroll, Environment } from '@react-three/drei'
 import * as THREE from 'three'
 import ExplosiveCategoryModal from './ExplosiveCategoryModal'
 import DandelionHero from './DandelionHero'
@@ -257,6 +257,12 @@ export default function CinematicScene() {
       />
 
       <DandelionHero position={[0, -0.75, 0]} />
+
+      {/* Not shown as a backdrop (background={false}) — this exists
+          purely so the bloom's transmission-glass petals have real
+          reflections/refraction to catch. Without it, transmission
+          materials render nearly invisible. */}
+      <Environment preset="night" background={false} />
 
       {/* ================================================== */}
       {/* KEYHOLE / IRIS OVERLAY                              */}
