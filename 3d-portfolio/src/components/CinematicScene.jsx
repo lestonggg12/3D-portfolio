@@ -41,6 +41,7 @@ export default function CinematicScene({
   const heroLeftRef = useRef();
   const heroRightRef = useRef();
   const heroSubtitleRef = useRef();
+  const lookAtTarget = useRef(new THREE.Vector3()).current;
 
   const handleCopyEmail = () => {
     navigator.clipboard.writeText('lesteralcantara1432@gmail.com');
@@ -118,8 +119,8 @@ export default function CinematicScene({
     );
 
     // Dynamic LookAt with soft tracking
-    const currentTarget = new THREE.Vector3(lookX, lookY, lookZ);
-    state.camera.lookAt(currentTarget);
+    lookAtTarget.set(lookX, lookY, lookZ);
+    state.camera.lookAt(lookAtTarget);
 
     // Subtle aerodynamic roll / banking angle on trajectory curves
     const rollAngle =

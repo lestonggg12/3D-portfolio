@@ -13,7 +13,14 @@ export default function App() {
 
   const handleScrollStateChange = useCallback((section, progress) => {
     setCurrentSection((prev) => (prev !== section ? section : prev));
-    setScrollProgress(progress);
+    setScrollProgress((prev) => {
+      // Round to ~0.5% steps and bail out if unchanged — calling this
+      // every frame with a raw float forced a full React re-render
+      // (including the Tailwind-heavy HUD) 60x/second, which can be
+      // enough main-thread contention to make scroll input feel dead.
+      const rounded = Math.round(progress * 200) / 200;
+      return Math.abs(prev - rounded) < 0.0025 ? prev : rounded;
+    });
   }, []);
 
   const handleNavigateSection = useCallback((targetIndex) => {
