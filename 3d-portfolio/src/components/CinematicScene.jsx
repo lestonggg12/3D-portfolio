@@ -58,8 +58,8 @@ export default function CinematicScene({
   const allProjects = projectCategories.flatMap((cat) => cat.projects);
   const activeFeaturedProject = allProjects[featuredProjectIndex] || allProjects[0];
 
-  useFrame((state) => {
-    const offset = scroll.offset; // 0 to 1
+ useFrame((state) => {
+    const offset = scroll.offset;
 
     // Update section index (1 to 7) based on scroll progress
     const sectionIndex = Math.min(7, Math.max(1, Math.floor(offset * 6.99) + 1));
