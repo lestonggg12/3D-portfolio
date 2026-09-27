@@ -92,7 +92,7 @@ export default function App() {
         }}
       >
         {/* damping={4} provides immediate, fluid scroll response */}
-        <ScrollControls pages={7} damping={4}>
+        <ScrollControls pages={7} damping={0.2}>
           <CinematicScene
             onScrollStateChange={handleScrollStateChange}
             onNavigateSection={handleNavigateSection}

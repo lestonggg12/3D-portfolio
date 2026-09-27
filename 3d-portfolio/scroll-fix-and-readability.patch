@@ -1,0 +1,123 @@
+diff --git a/3d-portfolio/src/components/CinematicScene.jsx b/3d-portfolio/src/components/CinematicScene.jsx
+index eb6bc3c..4719566 100644
+--- a/3d-portfolio/src/components/CinematicScene.jsx
++++ b/3d-portfolio/src/components/CinematicScene.jsx
+@@ -333,15 +333,15 @@ export default function CinematicScene({
+             <div className="pt-3 border-t border-white/10 grid grid-cols-3 gap-2 text-center font-mono">
+               <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                 <div className="text-base sm:text-lg font-bold text-sky-300">10k+</div>
+-                <div className="text-[10px] text-zinc-400 uppercase">Transactions</div>
++                <div className="text-[11px] text-zinc-400 uppercase">Transactions</div>
+               </div>
+               <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                 <div className="text-base sm:text-lg font-bold text-emerald-400">99.9%</div>
+-                <div className="text-[10px] text-zinc-400 uppercase">Uptime Goal</div>
++                <div className="text-[11px] text-zinc-400 uppercase">Uptime Goal</div>
+               </div>
+               <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                 <div className="text-base sm:text-lg font-bold text-cyan-300">&lt;50ms</div>
+-                <div className="text-[10px] text-zinc-400 uppercase">Query Target</div>
++                <div className="text-[11px] text-zinc-400 uppercase">Query Target</div>
+               </div>
+             </div>
+           </div>
+@@ -626,7 +626,7 @@ export default function CinematicScene({
+               <div className="text-xs font-mono text-zinc-400">
+                 lesteralcantara1432@gmail.com
+               </div>
+-              <div className="text-[10px] font-mono text-zinc-600">
++              <div className="text-[11px] font-mono text-zinc-400">
+                 Cagayan de Oro, Northern Mindanao, Philippines (UTC+8)
+               </div>
+             </div>
+diff --git a/3d-portfolio/src/components/HUD.jsx b/3d-portfolio/src/components/HUD.jsx
+index f93e554..ee89f83 100644
+--- a/3d-portfolio/src/components/HUD.jsx
++++ b/3d-portfolio/src/components/HUD.jsx
+@@ -35,7 +35,7 @@ export default function HUD({
+               </span>
+               <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Available for engineering opportunities" />
+             </div>
+-            <span className="text-[10px] text-sky-400/90 font-mono tracking-widest uppercase">
++            <span className="text-[11px] text-sky-400/90 font-mono tracking-widest uppercase">
+               Software Engineer · Comp Eng '28
+             </span>
+           </div>
+@@ -52,7 +52,7 @@ export default function HUD({
+         {/* Right Section Index Counter & Jump Controls */}
+         <div className="flex items-center gap-2.5 sm:gap-4">
+           <div className="flex items-center gap-2 bg-zinc-950/70 border border-white/10 px-3 py-1.5 rounded-lg backdrop-blur-md">
+-            <span className="text-[10px] text-zinc-400 font-mono tracking-wider">INDEX</span>
++            <span className="text-[11px] text-zinc-400 font-mono tracking-wider">INDEX</span>
+             <span className="text-xs font-mono font-semibold text-sky-300 tracking-widest">
+               0{currentSection} / 0{totalSections}
+             </span>
+@@ -99,7 +99,7 @@ export default function HUD({
+               title={`Jump to ${name}`}
+             >
+               <span
+-                className={`text-[9px] font-mono tracking-widest uppercase transition-all duration-200 ${
++                className={`text-[11px] font-mono tracking-widest uppercase transition-all duration-200 ${
+                   isActive
+                     ? 'text-sky-300 opacity-100 translate-x-0 font-semibold'
+                     : 'text-zinc-500 opacity-0 group-hover:opacity-100 group-hover:text-zinc-300 translate-x-2 group-hover:translate-x-0'
+@@ -123,23 +123,23 @@ export default function HUD({
+       <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-8 md:px-12 pb-4 sm:pb-5 pt-3 flex items-center justify-between text-[11px] font-mono text-zinc-400">
+         <div className="flex items-center gap-3">
+           <div className="w-5 h-[1px] bg-sky-400/50" />
+-          <span className="tracking-widest uppercase text-sky-400/90 text-[10px]">
++          <span className="tracking-widest uppercase text-sky-400/90 text-[11px]">
+             ALCANTARA 3D ARCHITECTURE
+           </span>
+-          <span className="hidden sm:inline text-zinc-600">·</span>
+-          <span className="hidden sm:inline text-zinc-400 text-[10px]">
++          <span className="hidden sm:inline text-zinc-400">·</span>
++          <span className="hidden sm:inline text-zinc-400 text-[11px]">
+             CAGAYAN DE ORO, PH
+           </span>
+         </div>
+ 
+         <div className="flex items-center gap-4">
+-          <div className="hidden sm:flex items-center gap-1.5 text-zinc-400 text-[10px]">
++          <div className="hidden sm:flex items-center gap-1.5 text-zinc-400 text-[11px]">
+             <Compass className="w-3 h-3 text-sky-400/70" />
+             <span>INTERACTIVE SPATIAL VOYAGE</span>
+           </div>
+           <button
+             onClick={() => onNavigateSection && onNavigateSection(Math.min(currentSection, totalSections - 1))}
+-            className="pointer-events-auto text-[10px] text-zinc-400 hover:text-sky-300 tracking-wider flex items-center gap-1 cursor-pointer transition-colors"
++            className="pointer-events-auto text-[11px] text-zinc-400 hover:text-sky-300 tracking-wider flex items-center gap-1 cursor-pointer transition-colors"
+           >
+             <span>SCROLL TO DISPERSE</span>
+             <span className="animate-bounce">↓</span>
+diff --git a/3d-portfolio/src/main.jsx b/3d-portfolio/src/main.jsx
+index 833c97f..9c1f9d4 100644
+--- a/3d-portfolio/src/main.jsx
++++ b/3d-portfolio/src/main.jsx
+@@ -1,10 +1,20 @@
+-import { StrictMode } from 'react';
+ import { createRoot } from 'react-dom/client';
+ import App from './App.jsx';
+ import './index.css';
+ 
+-createRoot(document.getElementById('root')).render(
+-  <StrictMode>
+-    <App />
+-  </StrictMode>,
+-);
++// NOTE: intentionally not wrapped in <StrictMode>.
++// @react-three/drei's <ScrollControls><Scroll html> internally does
++// `useMemo(() => ReactDOM.createRoot(state.fixed), [state.fixed])` to mount
++// the HTML layer into its own nested React root. StrictMode double-invokes
++// useMemo initializers on mount in dev, which calls createRoot() twice on
++// the same DOM node. React logs "you are calling createRoot() on a
++// container that has already been passed to createRoot()" and the scroll
++// transform stops being applied to the live tree — the page scrolls
++// internally (the HUD progress bar / index counter updates) but the 3D
++// scene and HTML sections visually never move. This is a known
++// drei/StrictMode incompatibility, not a bug in this app's own code — see
++// https://github.com/pmndrs/react-three-a11y/issues/52 for the same root
++// cause in a sibling package. Do not re-add StrictMode around <App /> (or
++// around anything containing the Canvas) without also patching
++// ScrollControls to guard against a double createRoot() call.
++createRoot(document.getElementById('root')).render(<App />);
