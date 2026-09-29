@@ -26,9 +26,15 @@ export default function HUD({
       <div className="absolute top-0 left-0 right-0 px-4 sm:px-8 md:px-12 pt-4 sm:pt-6 pb-4 flex items-center justify-between">
         {/* Left Monogram & Identity */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-sky-950/50 border border-sky-400/30 flex items-center justify-center backdrop-blur-md shadow-lg shadow-sky-950/50">
+          <button
+            type="button"
+            onClick={() => onNavigateSection?.(0)}
+            aria-label="Return to origin seed"
+            title="Return to origin seed"
+            className="w-9 h-9 rounded-xl bg-sky-950/50 border border-sky-400/30 flex items-center justify-center backdrop-blur-md shadow-lg shadow-sky-950/50 hover:border-sky-300/70 hover:bg-sky-900/60 transition-colors cursor-pointer pointer-events-auto"
+          >
             <span className="font-sans font-bold text-sky-200 text-sm tracking-wider">LA</span>
-          </div>
+          </button>
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
               <span className="text-zinc-100 font-semibold text-xs sm:text-sm tracking-wide font-sans">
@@ -43,21 +49,33 @@ export default function HUD({
         </div>
 
         {/* Center / Section Status Indicator */}
-        <div className="hidden md:flex items-center gap-2.5 bg-zinc-900/70 border border-sky-400/20 px-4 py-1.5 rounded-full backdrop-blur-md shadow-md">
+        <button
+          type="button"
+          onClick={() => onNavigateSection?.(Math.min(currentSection, totalSections - 1))}
+          aria-label={`Advance from ${currentSectionName} to the next section`}
+          title="Jump to the next section"
+          className="hidden md:flex items-center gap-2.5 bg-zinc-900/70 border border-sky-400/20 px-4 py-1.5 rounded-full backdrop-blur-md shadow-md hover:border-sky-400/60 hover:bg-sky-900/50 transition-colors cursor-pointer pointer-events-auto"
+        >
           <Sparkles className="w-3.5 h-3.5 text-sky-400 animate-spin-slow" />
           <span className="text-[11px] font-mono text-zinc-200 tracking-wider">
             {currentSectionName}
           </span>
-        </div>
+        </button>
 
         {/* Right Section Index Counter & Jump Controls */}
         <div className="flex items-center gap-2.5 sm:gap-4">
-          <div className="flex items-center gap-2 bg-zinc-950/70 border border-white/10 px-3 py-1.5 rounded-lg backdrop-blur-md">
+          <button
+            type="button"
+            onClick={() => onNavigateSection?.(Math.max(0, currentSection - 1))}
+            aria-label={`Recenter on ${currentSectionName}`}
+            title={`Recenter on ${currentSectionName}`}
+            className="flex items-center gap-2 bg-zinc-950/70 border border-white/10 px-3 py-1.5 rounded-lg backdrop-blur-md hover:border-sky-400/50 hover:bg-zinc-900 transition-colors cursor-pointer pointer-events-auto"
+          >
             <span className="text-[10px] text-zinc-400 font-mono tracking-wider">INDEX</span>
             <span className="text-xs font-mono font-semibold text-sky-300 tracking-widest">
               0{currentSection} / 0{totalSections}
             </span>
-          </div>
+          </button>
 
           <a
             href="mailto:lesteralcantara1432@gmail.com"

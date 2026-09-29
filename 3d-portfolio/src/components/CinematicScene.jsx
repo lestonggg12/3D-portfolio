@@ -29,7 +29,8 @@ import {
 export default function CinematicScene({
   onScrollStateChange,
   onSelectCategory,
-  onNavigateSection
+  onNavigateSection,
+  onOpenContact
 }) {
   const scroll = useScroll();
   const [copiedEmail, setCopiedEmail] = useState(false);
@@ -41,13 +42,12 @@ export default function CinematicScene({
   const heroLeftRef = useRef();
   const heroRightRef = useRef();
   const heroSubtitleRef = useRef();
-  const sectionElementsRef = useRef([]);
+  const scrollElementRef = useRef(null);
   const lookAtTarget = useRef(new THREE.Vector3()).current;
 
   useEffect(() => {
-    sectionElementsRef.current = [...document.querySelectorAll('[data-scroll-section]')];
     return () => {
-      sectionElementsRef.current = [];
+      scrollElementRef.current = null;
     };
   }, []);
 
@@ -57,9 +57,15 @@ export default function CinematicScene({
     setTimeout(() => setCopiedEmail(false), 2500);
   };
 
+
   const handleOpenCategory = (cat) => {
     setActiveCategory(cat);
     if (onSelectCategory) onSelectCategory(cat);
+  };
+
+  const handleOpenCategoryById = (categoryId) => {
+    const category = projectCategories.find((item) => item.id === categoryId);
+    if (category) handleOpenCategory(category);
   };
 
   // Flattened list of projects for the featured interactive showcase
@@ -67,6 +73,16 @@ export default function CinematicScene({
   const activeFeaturedProject = allProjects[featuredProjectIndex] || allProjects[0];
 
  useFrame((state) => {
+    const scrollElement = scrollElementRef.current || [...document.querySelectorAll('div')].find((element) => {
+      const style = window.getComputedStyle(element);
+      return style.overflowY === 'auto' && element.scrollHeight > element.clientHeight;
+    });
+    scrollElementRef.current = scrollElement;
+    if (scrollElement) {
+      const rawOffset = scrollElement.scrollTop / Math.max(1, scrollElement.scrollHeight - scrollElement.clientHeight);
+      scroll.current = rawOffset;
+      scroll.offset = rawOffset;
+    }
     const offset = scroll.offset;
 
     // Update section index (1 to 7) based on scroll progress
@@ -74,19 +90,6 @@ export default function CinematicScene({
     if (onScrollStateChange) {
       onScrollStateChange(sectionIndex, offset);
     }
-
-    const viewportHeight = state.gl.domElement.clientHeight;
-    const viewportCenter = viewportHeight / 2;
-    sectionElementsRef.current.forEach((section) => {
-      const sectionCenter = section.getBoundingClientRect().top + section.offsetHeight / 2;
-      const focus = THREE.MathUtils.clamp(
-        1 - Math.abs(sectionCenter - viewportCenter) / (viewportHeight * 0.9),
-        0,
-        1
-      );
-      section.style.opacity = `${0.42 + focus * 0.58}`;
-      section.style.transform = `translate3d(0, ${(1 - focus) * 18}px, 0)`;
-    });
 
     // =========================================================================
     // UNPREDICTABLE 3D SPATIAL CAMERA CHOREOGRAPHY
@@ -181,14 +184,14 @@ export default function CinematicScene({
       <DandelionVoyage />
 
       {/* 2D HTML Narrative Scroll Container */}
-      <Scroll html style={{ width: '100%', position: 'relative', zIndex: 10 }}>
+      <Scroll html style={{ width: '100%', position: 'relative', zIndex: 10, pointerEvents: 'auto' }}>
         {/* ================================================== */}
         {/* SCREEN 1: HERO OVERLAY                             */}
         {/* ================================================== */}
         <section data-scroll-section className="w-screen h-screen relative flex items-center justify-center overflow-hidden pointer-events-none select-none">
           <div
             ref={heroLeftRef}
-            className="absolute left-[4vw] sm:left-[12vw] top-1/2 -translate-y-1/2 pointer-events-none transition-transform will-change-transform"
+            className="absolute left-[4vw] sm:left-[12vw] top-1/2 -translate-y-1/2 pointer-events-none will-change-transform"
           >
             <h1 className="text-zinc-100 font-sans font-light tracking-[-0.05em] text-[11vw] sm:text-[9vw] leading-none drop-shadow-[0_10px_40px_rgba(0,0,0,0.95)] [-webkit-text-stroke:1px_rgba(2,4,6,0.65)]">
               LESTER
@@ -197,7 +200,7 @@ export default function CinematicScene({
 
           <div
             ref={heroRightRef}
-            className="absolute right-[4vw] sm:right-[12vw] top-1/2 -translate-y-1/2 pointer-events-none transition-transform will-change-transform"
+            className="absolute right-[4vw] sm:right-[12vw] top-1/2 -translate-y-1/2 pointer-events-none will-change-transform"
           >
             <h1 className="text-zinc-100 font-sans font-light tracking-[-0.05em] text-[11vw] sm:text-[9vw] leading-none drop-shadow-[0_10px_40px_rgba(0,0,0,0.95)] [-webkit-text-stroke:1px_rgba(2,4,6,0.65)]">
               ALCANTARA
@@ -207,7 +210,7 @@ export default function CinematicScene({
           {/* Subtitle & Scroll Invitation */}
           <div
             ref={heroSubtitleRef}
-            className="absolute bottom-14 sm:bottom-16 left-1/2 -translate-x-1/2 text-center flex flex-col items-center gap-2 pointer-events-auto px-4"
+            className="absolute bottom-14 sm:bottom-16 left-1/2 -translate-x-1/2 text-center flex flex-col items-center gap-2 pointer-events-auto px-4 will-change-transform"
           >
             <p className="text-xs sm:text-sm font-mono tracking-[0.25em] text-zinc-400 uppercase text-center">
               Every build starts as a single seed
@@ -350,18 +353,33 @@ export default function CinematicScene({
 
             {/* Metric Highlights Strip */}
             <div className="pt-3 border-t border-white/10 grid grid-cols-3 gap-2 text-center font-mono">
-              <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+              <button
+                type="button"
+                onClick={() => onNavigateSection?.(4)}
+                className="p-2 rounded-lg bg-white/5 border border-white/5 hover:border-sky-400/40 hover:bg-sky-950/30 transition-all cursor-pointer"
+                aria-label="View featured projects and transaction systems"
+              >
                 <div className="text-base sm:text-lg font-bold text-sky-300">10k+</div>
                 <div className="text-[10px] text-zinc-400 uppercase">Transactions</div>
-              </div>
-              <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenCategoryById('cloud-architecture')}
+                className="p-2 rounded-lg bg-white/5 border border-white/5 hover:border-emerald-400/40 hover:bg-emerald-950/20 transition-all cursor-pointer"
+                aria-label="View cloud uptime systems"
+              >
                 <div className="text-base sm:text-lg font-bold text-emerald-400">99.9%</div>
                 <div className="text-[10px] text-zinc-400 uppercase">Uptime Goal</div>
-              </div>
-              <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenCategoryById('cloud-architecture')}
+                className="p-2 rounded-lg bg-white/5 border border-white/5 hover:border-cyan-400/40 hover:bg-cyan-950/20 transition-all cursor-pointer"
+                aria-label="View query performance systems"
+              >
                 <div className="text-base sm:text-lg font-bold text-cyan-300">&lt;50ms</div>
                 <div className="text-[10px] text-zinc-400 uppercase">Query Target</div>
-              </div>
+              </button>
             </div>
           </div>
         </section>
@@ -384,39 +402,67 @@ export default function CinematicScene({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs">
-              <div className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 transition-all flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleOpenCategoryById('fullstack-apps')}
+                className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 hover:bg-sky-950/30 transition-all flex flex-col gap-1.5 text-left cursor-pointer"
+                aria-label="Explore language projects"
+              >
                 <span className="text-sky-400 font-semibold tracking-wider flex items-center gap-1.5">
                   <Terminal className="w-3.5 h-3.5" />
                   LANGUAGES
                 </span>
                 <span className="text-zinc-200">JavaScript, Python, C++, TypeScript, SQL, Bash</span>
-              </div>
+              </button>
 
-              <div className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 transition-all flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleOpenCategoryById('fullstack-apps')}
+                className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 hover:bg-sky-950/30 transition-all flex flex-col gap-1.5 text-left cursor-pointer"
+                aria-label="Explore frontend and 3D projects"
+              >
                 <span className="text-sky-400 font-semibold tracking-wider flex items-center gap-1.5">
                   <Code2 className="w-3.5 h-3.5" />
                   FRONTEND & 3D
                 </span>
                 <span className="text-zinc-200">React, Three.js, React Three Fiber, Tailwind CSS, Vite</span>
-              </div>
+              </button>
 
-              <div className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 transition-all flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleOpenCategoryById('systems-platforms')}
+                className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 hover:bg-sky-950/30 transition-all flex flex-col gap-1.5 text-left cursor-pointer"
+                aria-label="Explore backend and API projects"
+              >
                 <span className="text-sky-400 font-semibold tracking-wider flex items-center gap-1.5">
                   <Server className="w-3.5 h-3.5" />
                   BACKEND & APIS
                 </span>
                 <span className="text-zinc-200">Node.js, Express, RESTful APIs, WebSockets, Django</span>
-              </div>
+              </button>
 
-              <div className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 transition-all flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleOpenCategoryById('cloud-architecture')}
+                className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 hover:bg-sky-950/30 transition-all flex flex-col gap-1.5 text-left cursor-pointer"
+                aria-label="Explore database and cloud projects"
+              >
                 <span className="text-sky-400 font-semibold tracking-wider flex items-center gap-1.5">
                   <Database className="w-3.5 h-3.5" />
                   DATABASE & CLOUD
                 </span>
                 <span className="text-zinc-200">Supabase, PostgreSQL, Relational Migrations, RLS Security</span>
-              </div>
+              </button>
 
-              <div className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-sky-400/30 transition-all sm:col-span-2 flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setAboutTab('lab');
+                  onNavigateSection?.(2);
+                }}
+                className="p-3.5 rounded-xl bg-zinc-900/70 border border-white/10 hover:border-cyan-400/30 hover:bg-cyan-950/20 transition-all sm:col-span-2 flex flex-col gap-1.5 text-left cursor-pointer"
+                aria-label="Open hardware lab details"
+              >
                 <span className="text-cyan-400 font-semibold tracking-wider flex items-center gap-1.5">
                   <Cpu className="w-3.5 h-3.5" />
                   HARDWARE & SYSTEMS
@@ -424,7 +470,7 @@ export default function CinematicScene({
                 <span className="text-zinc-300">
                   ESP32 Microcontrollers, Digital Logic Design, Linux/UNIX Environments, Git Workflow
                 </span>
-              </div>
+              </button>
             </div>
           </div>
         </section>
@@ -467,7 +513,17 @@ export default function CinematicScene({
             {/* Active Featured Project Stage */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
               {/* Left Column: Visual Showcase */}
-              <div className="md:col-span-6 relative group overflow-hidden rounded-xl border border-white/10 bg-black/50 shadow-inner">
+              <button
+                type="button"
+                onClick={() => {
+                  const matchedCat = projectCategories.find((cat) =>
+                    cat.projects.some((p) => p.title === activeFeaturedProject.title)
+                  );
+                  handleOpenCategory(matchedCat || projectCategories[0]);
+                }}
+                className="md:col-span-6 relative group overflow-hidden rounded-xl border border-white/10 bg-black/50 shadow-inner text-left cursor-pointer hover:border-sky-400/50 transition-colors"
+                aria-label={`Open architecture view for ${activeFeaturedProject.title}`}
+              >
                 <img
                   src={activeFeaturedProject.image}
                   alt={activeFeaturedProject.title}
@@ -482,7 +538,7 @@ export default function CinematicScene({
                     {activeFeaturedProject.metrics}
                   </span>
                 </div>
-              </div>
+              </button>
 
               {/* Right Column: Deep Architecture Intel */}
               <div className="md:col-span-6 flex flex-col gap-3">
@@ -561,7 +617,15 @@ export default function CinematicScene({
             </div>
 
             <div className="flex flex-col gap-3 font-mono text-xs sm:text-sm">
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-zinc-900/60 border border-white/10 hover:border-sky-400/30 transition-all">
+              <button
+                type="button"
+                onClick={() => {
+                  setAboutTab('journey');
+                  onNavigateSection?.(2);
+                }}
+                className="flex items-start gap-3 p-4 rounded-xl bg-zinc-900/60 border border-white/10 hover:border-sky-400/30 hover:bg-sky-950/30 transition-all text-left cursor-pointer"
+                aria-label="Open education and journey details"
+              >
                 <GraduationCap className="w-5 h-5 text-sky-400 shrink-0 mt-0.5" />
                 <div>
                   <div className="text-sky-300 font-semibold">2028 // EXPECTED GRADUATION</div>
@@ -569,9 +633,17 @@ export default function CinematicScene({
                     Bachelor of Science in Computer Engineering, PHINMA Cagayan de Oro College.
                   </div>
                 </div>
-              </div>
+              </button>
 
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-zinc-900/60 border border-white/10 hover:border-amber-400/30 transition-all">
+              <button
+                type="button"
+                onClick={() => {
+                  setAboutTab('philosophy');
+                  onNavigateSection?.(2);
+                }}
+                className="flex items-start gap-3 p-4 rounded-xl bg-zinc-900/60 border border-white/10 hover:border-amber-400/30 hover:bg-amber-950/20 transition-all text-left cursor-pointer"
+                aria-label="Open philosophy details"
+              >
                 <Award className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                 <div>
                   <div className="text-amber-300 font-semibold">HONOR // CITY SCHOLAR</div>
@@ -579,9 +651,14 @@ export default function CinematicScene({
                     Awarded academic scholarship recognizing top engineering and scientific talent in the city.
                   </div>
                 </div>
-              </div>
+              </button>
 
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-zinc-900/60 border border-white/10 hover:border-emerald-400/30 transition-all">
+              <button
+                type="button"
+                onClick={() => onNavigateSection?.(4)}
+                className="flex items-start gap-3 p-4 rounded-xl bg-zinc-900/60 border border-white/10 hover:border-emerald-400/30 hover:bg-emerald-950/20 transition-all text-left cursor-pointer"
+                aria-label="View shipped production systems"
+              >
                 <Server className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
                   <div className="text-emerald-300 font-semibold">SHIPPED // PRODUCTION SYSTEMS IN ACTIVE USE</div>
@@ -589,7 +666,7 @@ export default function CinematicScene({
                     Multiple full-stack cloud database cores, residential governance portals, and commercial inventory subsystems handling real transactions daily.
                   </div>
                 </div>
-              </div>
+              </button>
             </div>
           </div>
         </section>
@@ -597,14 +674,14 @@ export default function CinematicScene({
         {/* ================================================== */}
         {/* SCREEN 7: TRANSMIT SIGNAL / CONTACT                */}
         {/* ================================================== */}
-        <section data-scroll-section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-6 md:px-12 overflow-hidden text-center">
-          <div className="max-w-2xl w-full flex flex-col items-center gap-6 bg-zinc-950/85 border border-sky-400/30 p-6 sm:p-12 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-sky-950/40">
+        <section data-scroll-section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-6 md:px-12 py-8 overflow-hidden text-center">
+          <div className="max-w-2xl w-full max-h-[calc(100vh-2rem)] overflow-y-auto flex flex-col items-center gap-4 bg-zinc-950/85 border border-sky-400/30 p-5 sm:p-8 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-sky-950/40">
             <span className="text-xs font-mono text-sky-400 uppercase tracking-widest font-semibold flex items-center gap-1.5">
               <Mail className="w-3.5 h-3.5" />
               TRANSMIT A SIGNAL
             </span>
 
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-light font-sans text-white tracking-tight leading-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-light font-sans text-white tracking-tight leading-tight">
               Be someone else's<br />
               <span className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-200 via-sky-400 to-cyan-300">
                 first hop.
@@ -616,14 +693,16 @@ export default function CinematicScene({
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-3 mt-2 w-full justify-center">
-              <a
-                href="mailto:lesteralcantara1432@gmail.com"
+              <button
+                type="button"
+                onClick={onOpenContact}
                 className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-sky-500 hover:bg-sky-400 text-zinc-950 font-mono font-bold text-xs uppercase tracking-widest transition-all duration-200 shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Send a signal →</span>
-              </a>
+              </button>
 
               <button
+                type="button"
                 onClick={handleCopyEmail}
                 className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-zinc-900/80 hover:bg-zinc-800 border border-sky-400/30 text-sky-300 font-mono text-xs uppercase tracking-widest transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
               >

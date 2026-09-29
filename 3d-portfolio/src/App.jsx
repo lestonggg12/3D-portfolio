@@ -5,8 +5,9 @@ import * as THREE from 'three';
 import CinematicScene from './components/CinematicScene';
 import NightFieldBackground from './components/NightFieldBackground';
 import HUD from './components/HUD';
+import ContactModal from './components/ContactModal';
 
-const PortfolioCanvas = memo(function PortfolioCanvas({ onScrollStateChange, onNavigateSection }) {
+const PortfolioCanvas = memo(function PortfolioCanvas({ onScrollStateChange, onNavigateSection, onOpenContact }) {
   return (
     <Canvas
       frameloop="always"
@@ -28,10 +29,11 @@ const PortfolioCanvas = memo(function PortfolioCanvas({ onScrollStateChange, onN
         pointerEvents: 'none'
       }}
     >
-      <ScrollControls pages={7} damping={0.08} style={{ zIndex: 1 }}>
+      <ScrollControls pages={7} damping={0.08} style={{ zIndex: 1, pointerEvents: 'auto' }}>
         <CinematicScene
           onScrollStateChange={onScrollStateChange}
           onNavigateSection={onNavigateSection}
+          onOpenContact={onOpenContact}
         />
       </ScrollControls>
     </Canvas>
@@ -41,6 +43,7 @@ const PortfolioCanvas = memo(function PortfolioCanvas({ onScrollStateChange, onN
 export default function App() {
   const [currentSection, setCurrentSection] = useState(1);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
   const scrollContainerRef = useRef(null);
 
   const getScrollElement = useCallback(() => {
@@ -99,27 +102,10 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [getScrollElement]);
 
-  useEffect(() => {
-    const handleWheel = (e) => {
-      if (e.target.closest('[role="dialog"]')) return;
-
-      const scrollableEl = getScrollElement();
-      if (!scrollableEl || e.deltaY === 0) return;
-
-      e.preventDefault();
-      const maxScroll = scrollableEl.scrollHeight - scrollableEl.clientHeight;
-      const nextScroll = Math.max(0, Math.min(maxScroll, scrollableEl.scrollTop + e.deltaY));
-      scrollableEl.scrollTo({ top: nextScroll, behavior: 'auto' });
-    };
-
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    return () => window.removeEventListener('wheel', handleWheel);
-  }, [getScrollElement]);
-
   return (
     <div
       ref={scrollContainerRef}
-      className="relative w-screen h-screen overflow-hidden bg-[#020406] select-none text-zinc-100 font-sans"
+      className="relative w-screen h-screen overflow-hidden bg-[#020406] select-none text-zinc-100 font-sans pointer-events-none"
     >
       {/* Cinematic Starfield & Ambient Glow Background */}
       <NightFieldBackground />
@@ -136,6 +122,12 @@ export default function App() {
       <PortfolioCanvas
         onScrollStateChange={handleScrollStateChange}
         onNavigateSection={handleNavigateSection}
+        onOpenContact={() => setContactModalOpen(true)}
+      />
+
+      <ContactModal
+        isOpen={contactModalOpen}
+        onClose={() => setContactModalOpen(false)}
       />
     </div>
   );
