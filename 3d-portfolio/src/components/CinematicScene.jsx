@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Scroll, useScroll } from '@react-three/drei';
 import * as THREE from 'three';
@@ -41,7 +41,15 @@ export default function CinematicScene({
   const heroLeftRef = useRef();
   const heroRightRef = useRef();
   const heroSubtitleRef = useRef();
+  const sectionElementsRef = useRef([]);
   const lookAtTarget = useRef(new THREE.Vector3()).current;
+
+  useEffect(() => {
+    sectionElementsRef.current = [...document.querySelectorAll('[data-scroll-section]')];
+    return () => {
+      sectionElementsRef.current = [];
+    };
+  }, []);
 
   const handleCopyEmail = () => {
     navigator.clipboard.writeText('lesteralcantara1432@gmail.com');
@@ -66,6 +74,19 @@ export default function CinematicScene({
     if (onScrollStateChange) {
       onScrollStateChange(sectionIndex, offset);
     }
+
+    const viewportHeight = state.gl.domElement.clientHeight;
+    const viewportCenter = viewportHeight / 2;
+    sectionElementsRef.current.forEach((section) => {
+      const sectionCenter = section.getBoundingClientRect().top + section.offsetHeight / 2;
+      const focus = THREE.MathUtils.clamp(
+        1 - Math.abs(sectionCenter - viewportCenter) / (viewportHeight * 0.9),
+        0,
+        1
+      );
+      section.style.opacity = `${0.42 + focus * 0.58}`;
+      section.style.transform = `translate3d(0, ${(1 - focus) * 18}px, 0)`;
+    });
 
     // =========================================================================
     // UNPREDICTABLE 3D SPATIAL CAMERA CHOREOGRAPHY
@@ -164,22 +185,22 @@ export default function CinematicScene({
         {/* ================================================== */}
         {/* SCREEN 1: HERO OVERLAY                             */}
         {/* ================================================== */}
-        <section className="w-screen h-screen relative flex items-center justify-center overflow-hidden pointer-events-none select-none">
+        <section data-scroll-section className="w-screen h-screen relative flex items-center justify-center overflow-hidden pointer-events-none select-none">
           <div
             ref={heroLeftRef}
-            className="absolute left-[4vw] sm:left-[8vw] top-1/2 -translate-y-1/2 pointer-events-none transition-transform will-change-transform"
+            className="absolute left-[4vw] sm:left-[12vw] top-1/2 -translate-y-1/2 pointer-events-none transition-transform will-change-transform"
           >
-            <h1 className="text-zinc-100 font-sans font-light tracking-[-0.05em] text-[11vw] sm:text-[9vw] leading-none drop-shadow-[0_10px_40px_rgba(0,0,0,0.85)]">
-              ALCANTARA
+            <h1 className="text-zinc-100 font-sans font-light tracking-[-0.05em] text-[11vw] sm:text-[9vw] leading-none drop-shadow-[0_10px_40px_rgba(0,0,0,0.95)] [-webkit-text-stroke:1px_rgba(2,4,6,0.65)]">
+              LESTER
             </h1>
           </div>
 
           <div
             ref={heroRightRef}
-            className="absolute right-[4vw] sm:right-[8vw] top-1/2 -translate-y-1/2 pointer-events-none transition-transform will-change-transform"
+            className="absolute right-[4vw] sm:right-[12vw] top-1/2 -translate-y-1/2 pointer-events-none transition-transform will-change-transform"
           >
-            <h1 className="text-zinc-100 font-sans font-light tracking-[-0.05em] text-[11vw] sm:text-[9vw] leading-none drop-shadow-[0_10px_40px_rgba(0,0,0,0.85)]">
-              LESTER
+            <h1 className="text-zinc-100 font-sans font-light tracking-[-0.05em] text-[11vw] sm:text-[9vw] leading-none drop-shadow-[0_10px_40px_rgba(0,0,0,0.95)] [-webkit-text-stroke:1px_rgba(2,4,6,0.65)]">
+              ALCANTARA
             </h1>
           </div>
 
@@ -204,7 +225,7 @@ export default function CinematicScene({
         {/* ================================================== */}
         {/* SCREEN 2: CORE DOCTRINE / HOOK                     */}
         {/* ================================================== */}
-        <section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-6 md:px-12 overflow-hidden">
+        <section data-scroll-section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-6 md:px-12 overflow-hidden">
           <div className="max-w-2xl w-full text-center flex flex-col items-center gap-5 bg-zinc-950/75 border border-sky-400/20 p-6 sm:p-10 md:p-12 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-sky-950/40">
             <span className="text-xs font-mono tracking-widest text-sky-400 uppercase flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
@@ -232,18 +253,15 @@ export default function CinematicScene({
         {/* ================================================== */}
         {/* SCREEN 3: ABOUT ME (RICH STORY & MOCK-UPS)         */}
         {/* ================================================== */}
-        <section className="w-screen h-screen relative flex items-center justify-center sm:justify-start px-4 sm:px-10 md:px-20 overflow-hidden">
+        <section data-scroll-section className="w-screen h-screen relative flex items-center justify-center sm:justify-start px-4 sm:px-10 md:px-20 overflow-hidden">
+          <img
+            src="/profile.jpg"
+            alt="Lester Alcantara"
+            className="hidden lg:block absolute right-[10vw] top-1/2 -translate-y-1/2 w-[clamp(18rem,26vw,24rem)] aspect-square rounded-[2rem] object-cover border-2 border-sky-400/50 shadow-2xl shadow-sky-500/25"
+          />
           <div className="max-w-xl w-full bg-zinc-950/85 border border-sky-400/30 p-6 sm:p-9 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-black/80 flex flex-col gap-5">
             {/* Header with Photo & Status */}
             <div className="flex items-center gap-4 border-b border-white/10 pb-4">
-              <img
-                src="/profile.jpg"
-                alt="Lester Alcantara"
-                className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl object-cover border-2 border-sky-400/40 shadow-lg shadow-sky-500/20 shrink-0"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
-              />
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <h3 className="text-2xl sm:text-3xl font-extrabold font-sans text-white tracking-tight">
@@ -351,7 +369,7 @@ export default function CinematicScene({
         {/* ================================================== */}
         {/* SCREEN 4: SYSTEM ROOTS (TECHNICAL CAPABILITIES)    */}
         {/* ================================================== */}
-        <section className="w-screen h-screen relative flex items-center justify-center sm:justify-end px-4 sm:px-10 md:px-20 overflow-hidden">
+        <section data-scroll-section className="w-screen h-screen relative flex items-center justify-center sm:justify-end px-4 sm:px-10 md:px-20 overflow-hidden">
           <div className="max-w-xl w-full bg-zinc-950/85 border border-sky-400/30 p-6 sm:p-9 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-black/80 flex flex-col gap-5">
             <div>
               <span className="text-xs font-mono text-sky-400 uppercase tracking-widest font-semibold">
@@ -414,7 +432,7 @@ export default function CinematicScene({
         {/* ================================================== */}
         {/* SCREEN 5: FEATURED PROJECTS SPOTLIGHT (INTERACTIVE) */}
         {/* ================================================== */}
-        <section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-8 md:px-12 overflow-hidden">
+        <section data-scroll-section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-8 md:px-12 overflow-hidden">
           <div className="max-w-5xl w-full bg-zinc-950/85 border border-sky-400/30 p-5 sm:p-8 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-black/90 flex flex-col gap-5">
             {/* Header & Category Switcher */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
@@ -528,7 +546,7 @@ export default function CinematicScene({
         {/* ================================================== */}
         {/* SCREEN 6: READINGS & MILESTONES                    */}
         {/* ================================================== */}
-        <section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-6 md:px-12 overflow-hidden">
+        <section data-scroll-section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-6 md:px-12 overflow-hidden">
           <div className="max-w-2xl w-full bg-zinc-950/85 border border-sky-400/30 p-6 sm:p-10 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-black/80 flex flex-col gap-6">
             <div className="border-b border-white/10 pb-4">
               <span className="text-xs font-mono text-sky-400 uppercase tracking-widest font-semibold">
@@ -579,7 +597,7 @@ export default function CinematicScene({
         {/* ================================================== */}
         {/* SCREEN 7: TRANSMIT SIGNAL / CONTACT                */}
         {/* ================================================== */}
-        <section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-6 md:px-12 overflow-hidden text-center">
+        <section data-scroll-section className="w-screen h-screen relative flex items-center justify-center px-4 sm:px-6 md:px-12 overflow-hidden text-center">
           <div className="max-w-2xl w-full flex flex-col items-center gap-6 bg-zinc-950/85 border border-sky-400/30 p-6 sm:p-12 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-sky-950/40">
             <span className="text-xs font-mono text-sky-400 uppercase tracking-widest font-semibold flex items-center gap-1.5">
               <Mail className="w-3.5 h-3.5" />

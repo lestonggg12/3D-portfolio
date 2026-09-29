@@ -18,6 +18,7 @@ export default function HUD({
 }) {
   const currentSectionName = SECTION_NAMES[Math.min(currentSection - 1, SECTION_NAMES.length - 1)] || 'ORIGIN SEED';
   const progressPercent = Math.max(0, Math.min(100, scrollProgress * 100));
+  const isAtBottom = scrollProgress >= 0.995;
 
   return (
     <header className="fixed inset-0 pointer-events-none z-50 select-none">
@@ -78,7 +79,9 @@ export default function HUD({
           const targetIdx = Math.round(fraction * (totalSections - 1));
           onNavigateSection(targetIdx);
         }}
-        className="pointer-events-auto cursor-pointer absolute top-[62px] sm:top-[74px] left-4 sm:left-8 md:left-12 right-4 sm:right-8 md:right-12 h-[3px] bg-white/10 hover:bg-white/20 rounded-full overflow-hidden transition-all group"
+        className={`pointer-events-auto cursor-pointer absolute top-[62px] sm:top-[74px] left-4 sm:left-8 md:left-12 right-4 sm:right-8 md:right-12 h-[3px] bg-white/10 hover:bg-white/20 rounded-full overflow-hidden transition-all duration-500 group ${
+          isAtBottom ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
         title="Click progress bar to jump to section"
       >
         <div

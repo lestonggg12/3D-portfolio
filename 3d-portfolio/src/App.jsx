@@ -28,7 +28,7 @@ const PortfolioCanvas = memo(function PortfolioCanvas({ onScrollStateChange, onN
         pointerEvents: 'none'
       }}
     >
-      <ScrollControls pages={7} damping={0.08} infinite style={{ zIndex: 1 }}>
+      <ScrollControls pages={7} damping={0.08} style={{ zIndex: 1 }}>
         <CinematicScene
           onScrollStateChange={onScrollStateChange}
           onNavigateSection={onNavigateSection}
@@ -108,15 +108,8 @@ export default function App() {
 
       e.preventDefault();
       const maxScroll = scrollableEl.scrollHeight - scrollableEl.clientHeight;
-      const nextScroll = scrollableEl.scrollTop + e.deltaY;
-
-      if (nextScroll >= maxScroll) {
-        scrollableEl.scrollTo({ top: 1, behavior: 'auto' });
-      } else if (nextScroll <= 1) {
-        scrollableEl.scrollTo({ top: maxScroll - 1, behavior: 'auto' });
-      } else {
-        scrollableEl.scrollTo({ top: nextScroll, behavior: 'auto' });
-      }
+      const nextScroll = Math.max(0, Math.min(maxScroll, scrollableEl.scrollTop + e.deltaY));
+      scrollableEl.scrollTo({ top: nextScroll, behavior: 'auto' });
     };
 
     window.addEventListener('wheel', handleWheel, { passive: false });

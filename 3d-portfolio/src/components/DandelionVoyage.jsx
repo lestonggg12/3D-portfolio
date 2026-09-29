@@ -18,8 +18,8 @@ function usePappusTexture() {
 
     // Center seed body / kernel
     const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.12);
-    core.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    core.addColorStop(0.6, 'rgba(210, 235, 255, 0.85)');
+    core.addColorStop(0, 'rgba(220, 240, 255, 0.7)');
+    core.addColorStop(0.6, 'rgba(170, 210, 240, 0.48)');
     core.addColorStop(1, 'rgba(255, 255, 255, 0)');
     ctx.fillStyle = core;
     ctx.beginPath();
@@ -29,7 +29,7 @@ function usePappusTexture() {
     // Radiating filament hairs (pappus parachute)
     const filamentCount = 20;
     ctx.lineCap = 'round';
-    ctx.shadowColor = 'rgba(157, 209, 255, 0.8)';
+    ctx.shadowColor = 'rgba(125, 185, 225, 0.45)';
     ctx.shadowBlur = 3;
 
     for (let i = 0; i < filamentCount; i++) {
@@ -38,7 +38,7 @@ function usePappusTexture() {
       const x2 = cx + Math.cos(angle) * len;
       const y2 = cy + Math.sin(angle) * len;
 
-      ctx.strokeStyle = `rgba(220, 240, 255, ${0.35 + Math.random() * 0.35})`;
+      ctx.strokeStyle = `rgba(180, 220, 245, ${0.18 + Math.random() * 0.2})`;
       ctx.lineWidth = 1.1 + Math.random() * 0.5;
       ctx.beginPath();
       ctx.moveTo(cx, cy);
@@ -54,7 +54,7 @@ function createSeedShaderMaterial(mapTexture) {
   return new THREE.ShaderMaterial({
     uniforms: {
       uMap: { value: mapTexture },
-      uColor: { value: new THREE.Color('#d4e8ff') }
+      uColor: { value: new THREE.Color('#a8cbe5') }
     },
     vertexShader: `
       attribute float aSize;
@@ -93,8 +93,6 @@ export default function DandelionVoyage({ onProgressUpdate }) {
   const pappusTexture = usePappusTexture();
 
   const groupRef = useRef();
-  const stemMeshRef = useRef();
-  const stemGlowRef = useRef();
   const coreRef = useRef();
   const seedGeometryRef = useRef();
   const driftingGeometryRef = useRef();
@@ -128,7 +126,7 @@ export default function DandelionVoyage({ onProgressUpdate }) {
       positions[i * 3 + 2] = base.z;
 
       sizes[i] = 4.2 + Math.random() * 3.5;
-      opacities[i] = 0.85;
+      opacities[i] = 0.5;
       thresholds[i] = Math.random() * 0.72;
       speeds[i] = 0.8 + Math.random() * 1.4;
       swirlPhases[i] = Math.random() * Math.PI * 2;
@@ -152,7 +150,7 @@ export default function DandelionVoyage({ onProgressUpdate }) {
       positions[i * 3 + 2] = -5 + Math.random() * 9;
 
       sizes[i] = 2.5 + Math.random() * 3.8;
-      opacities[i] = 0.25 + Math.random() * 0.6;
+      opacities[i] = 0.12 + Math.random() * 0.32;
       wander.push({
         speedX: (Math.random() - 0.5) * 0.35,
         speedY: 0.15 + Math.random() * 0.4,
@@ -166,19 +164,6 @@ export default function DandelionVoyage({ onProgressUpdate }) {
 
   const mainMaterial = useMemo(() => createSeedShaderMaterial(pappusTexture), [pappusTexture]);
   const driftMaterial = useMemo(() => createSeedShaderMaterial(pappusTexture), [pappusTexture]);
-
-  // Stem geometry
-  const stemCurve = useMemo(() => {
-    return new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, -1.0, 0),
-      new THREE.Vector3(-0.06, 0.5, 0.04),
-      new THREE.Vector3(0.04, 1.5, -0.02),
-      HEAD_CENTER.clone()
-    ]);
-  }, []);
-
-  const stemGeo = useMemo(() => new THREE.TubeGeometry(stemCurve, 32, 0.02, 8, false), [stemCurve]);
-  const stemGlowGeo = useMemo(() => new THREE.TubeGeometry(stemCurve, 32, 0.05, 8, false), [stemCurve]);
 
   useFrame((state) => {
     const time = state.clock.elapsedTime;
@@ -194,23 +179,10 @@ export default function DandelionVoyage({ onProgressUpdate }) {
       const mouseWindX = state.pointer.x * 0.08;
       groupRef.current.rotation.z = naturalSway + mouseWindX;
       groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, state.pointer.x * 0.2, 0.05);
-
-      // Descend stem smoothly when scrolling past hero
-      const stemDrop = THREE.MathUtils.smoothstep(offset, 0.14, 0.32);
-      groupRef.current.position.y = -stemDrop * 3.5;
-    }
-
-    // Stem opacity fade: Dissolves away cleanly into the breeze
-    const stemOpacity = 1 - THREE.MathUtils.smoothstep(offset, 0.16, 0.32);
-    if (stemMeshRef.current) {
-      stemMeshRef.current.material.opacity = Math.max(0, stemOpacity * 0.9);
-    }
-    if (stemGlowRef.current) {
-      stemGlowRef.current.material.opacity = Math.max(0, stemOpacity * 0.15);
     }
     if (coreRef.current) {
-      coreRef.current.position.y = HEAD_CENTER.y - (1 - stemOpacity) * 2.5;
-      coreRef.current.scale.setScalar(Math.max(0.001, stemOpacity));
+      coreRef.current.position.y = HEAD_CENTER.y;
+      coreRef.current.scale.setScalar(1);
     }
 
     // Dandelion seeds explosion & flight physics with UNPREDICTABLE TURBULENCE
@@ -249,8 +221,8 @@ export default function DandelionVoyage({ onProgressUpdate }) {
         posAttr.array[i * 3 + 2] = basePositions[i * 3 + 2] + dir.z * flight + (windDepthZ * localT) + swirlZ;
 
         sizeAttr.array[i] = (4.2 + (i % 3)) * (1 - localT * 0.35);
-        const baseAlpha = 0.85 * (1 - localT * 0.42);
-        opacityAttr.array[i] = Math.max(0.08, baseAlpha + Math.sin(time * 1.8 + i) * 0.12);
+        const baseAlpha = 0.34 * (1 - localT * 0.42);
+        opacityAttr.array[i] = Math.max(0.03, baseAlpha + Math.sin(time * 1.8 + i) * 0.05);
       }
 
       posAttr.needsUpdate = true;
@@ -274,7 +246,7 @@ export default function DandelionVoyage({ onProgressUpdate }) {
           dPosAttr.array[i * 3] = (Math.random() - 0.5) * 14;
         }
 
-        dOpAttr.array[i] = 0.35 + Math.sin(time * 2 + i) * 0.2;
+        dOpAttr.array[i] = 0.18 + Math.sin(time * 2 + i) * 0.08;
       }
 
       dPosAttr.needsUpdate = true;
@@ -284,27 +256,19 @@ export default function DandelionVoyage({ onProgressUpdate }) {
 
   return (
     <group ref={groupRef} position={[0, -0.6, 0]}>
-      {/* Stem Mesh */}
-      <mesh ref={stemGlowRef} geometry={stemGlowGeo}>
-        <meshBasicMaterial color="#38bdf8" transparent opacity={0.15} depthWrite={false} />
-      </mesh>
-      <mesh ref={stemMeshRef} geometry={stemGeo}>
-        <meshBasicMaterial color="#9dd1ff" transparent opacity={0.9} />
-      </mesh>
-
       {/* Core Glowing Receptacle */}
       <group ref={coreRef} position={HEAD_CENTER}>
         <mesh>
           <sphereGeometry args={[0.08, 16, 16]} />
-          <meshBasicMaterial color="#ffffff" />
+            <meshBasicMaterial color="#c5e0f2" />
         </mesh>
         <mesh>
           <sphereGeometry args={[0.22, 16, 16]} />
-          <meshBasicMaterial color="#9dd1ff" transparent opacity={0.2} depthWrite={false} />
+          <meshBasicMaterial color="#9dd1ff" transparent opacity={0.1} depthWrite={false} />
         </mesh>
         <mesh>
           <sphereGeometry args={[0.42, 16, 16]} />
-          <meshBasicMaterial color="#38bdf8" transparent opacity={0.06} depthWrite={false} />
+          <meshBasicMaterial color="#38bdf8" transparent opacity={0.03} depthWrite={false} />
         </mesh>
       </group>
 
